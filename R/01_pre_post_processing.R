@@ -57,9 +57,9 @@ replace_emoji_with_name <- function(text_vec) {
 #' @param text_col Character, name of the text column if \code{x} is a data.frame.
 #' Ignored if \code{x} is a character vector. Default = "text".
 #' @param id_col Character, optional column name in the input data.frame to
-#' preserve as an identifier column named \code{id}. Default = NULL.
+#' preserve as an identifier column named \code{doc_id_u}. Default = NULL.
 #' @param group_col Character, optional column name in the input data.frame
-#' to preserve as a grouping variable. Default = NULL.
+#' to preserve as a grouping variable column named \code{group}. Default = NULL.
 #' @param replace_emojis Logical, whether to replace emojis with placeholder
 #' names. Default = TRUE.
 #' @param replace_alphaless Logical, whether to replace strings that contain no
@@ -73,34 +73,14 @@ replace_emoji_with_name <- function(text_vec) {
 #' @param verbose Logical, whether to print progress messages. Default = TRUE.
 #'
 #' @details
-#' The cleaning pipeline performs the following steps:
-#' \enumerate{
-#'   \item Convert input to UTF-8 and replace NA with empty string.
-#'   \item Optionally replace emojis with placeholder names.
-#'   \item Remove unsupported characters (keep only letters, numbers, punctuation, whitespace).
-#'   \item Normalize encoding and truncate texts exceeding \code{max_char}.
-#'   \item Optionally remove texts without alphabetic characters.
-#'   \item Replace curly quotes with straight quotes.
-#'   \item Normalize numbers so that dots between digits or trailing dots are replaced with spaces
-#'   (e.g. \code{3.4.} becomes \code{3 4}).
-#'   \item Collapse repeated quotation marks to a single one.
-#'   \item Squish whitespace.
-#'   \item Optionally tokenize texts with more than 3 sentences into separate rows.
-#' }
-#'
-#' Sentence tokenization ensures each row has a unique \code{row_id} suffixed
-#' with the sentence number (e.g. \code{"12_1"}, \code{"12_2"}). Non-tokenized
-#' rows also receive a \code{"_1"} suffix for consistency. The column
-#' \code{sen_id} is always present and set to 1 if not tokenized.
-#'
-#' If \code{group_col} is specified, it is preserved in the output.
-#'
-#' The returned data.table contains the following columns:
+#' The returned data.table contains the following columns in fixed order:
 #' \itemize{
-#'   \item \code{row_id}: Unique identifier for each cleaned row.
-#'   \item \code{sen_id}: Sentence index (1 for non-tokenized).
-#'   \item \code{id}: User-provided identifier, if available.
-#'   \item \code{<group_col>}: Optional grouping column, if provided.
+#'   \item \code{sen_id}: Unique identifier for each sentence row, constructed
+#'   as \code{<doc_idx>_<sen_idx>}.
+#'   \item \code{doc_idx}: Row index of the original document in the input.
+#'   \item \code{sen_idx}: Sentence index within each document (1 for non-tokenized).
+#'   \item \code{doc_id_u}: Optional user-provided identifier, if \code{id_col} is given.
+#'   \item \code{group}: Optional grouping column, if \code{group_col} is given.
 #'   \item \code{text_orig}: Original text before cleaning.
 #'   \item \code{text_clean}: Cleaned and normalized text.
 #' }
@@ -126,15 +106,16 @@ clean_text <- function(x,
 
   vmessage <- function(...) if (verbose) message(...)
 
+  # --- Input handling ---
   if (is.character(x)) {
-    dt <- data.table::data.table(row_id = seq_along(x), text_orig = x)
+    dt <- data.table::data.table(doc_idx = seq_along(x), text_orig = x)
   } else if (is.data.frame(x)) {
     if (!text_col %in% names(x)) stop("text_col not found in data.frame")
     dt <- data.table::as.data.table(x)
-    dt[, row_id := .I]
+    dt[, doc_idx := .I]
     data.table::setnames(dt, text_col, "text_orig")
     if (!is.null(id_col) && id_col %in% names(dt)) {
-      data.table::setnames(dt, id_col, "id")
+      data.table::setnames(dt, id_col, "doc_id_u")
     }
     if (!is.null(group_col) && group_col %in% names(dt)) {
       data.table::setnames(dt, group_col, "group")
@@ -143,11 +124,11 @@ clean_text <- function(x,
     stop("x must be a character vector or data.frame")
   }
 
+  # --- Cleaning pipeline ---
   dt[, text_clean := enc2utf8(text_orig)]
   dt[is.na(text_clean), text_clean := ""]
   if (replace_emojis) dt[, text_clean := replace_emoji_with_name(text_clean)]
 
-  # keep only letters, numbers, punctuation, whitespace
   dt[, text_clean := stringi::stri_replace_all_regex(
     text_clean, "[^\\p{L}\\p{N}\\p{P}\\p{Zs}]", " "
   )]
@@ -157,7 +138,7 @@ clean_text <- function(x,
   if (replace_alphaless) dt[!grepl("[[:alpha:]]", text_clean), text_clean := ""]
   dt[, text_clean := textclean::replace_curly_quote(text_clean)]
 
-  # --- NEW CLEANING RULES ---
+  # normalize numbers, collapse quotes, squish whitespace
   dt[, text_clean := stringr::str_replace_all(text_clean, "(\\d)\\.(?=\\d)", "\\1 ")]
   dt[, text_clean := stringr::str_replace_all(text_clean, "(\\d)\\.(?!\\d)", "\\1 ")]
   dt[, text_clean := stringr::str_replace_all(text_clean, '\"{2,}', '"')]
@@ -179,9 +160,8 @@ clean_text <- function(x,
         lapply(seq_along(tokenized_list), function(i) {
           sents <- unlist(tokenized_list[[i]])
           data.table::data.table(
-            row_id = paste0(dt_long$row_id[i], "_", seq_along(sents)),
-            sen_id = seq_along(sents),
-            orig_row_id = dt_long$row_id[i],
+            doc_idx = dt_long$doc_idx[i],
+            sen_idx = seq_along(sents),
             text_clean = sents
           )
         }),
@@ -192,40 +172,36 @@ clean_text <- function(x,
       tokenized_dt <- merge(
         tokenized_dt,
         dt_long[, ..meta_cols],
-        by.x = "orig_row_id", by.y = "row_id",
+        by = "doc_idx",
         all.x = TRUE
       )
 
-      tokenized_dt[, orig_row_id := NULL]
-
       if (nrow(dt_short) > 0) {
-        dt_short[, sen_id := 1L]
-        dt_short[, row_id := paste0(row_id, "_1")]
+        dt_short[, sen_idx := 1L]
       }
 
       dt <- data.table::rbindlist(list(dt_short, tokenized_dt), use.names = TRUE, fill = TRUE)
     } else {
-      dt[, sen_id := 1L]
-      dt[, row_id := paste0(row_id, "_1")]
+      dt[, sen_idx := 1L]
     }
 
     dt[, n_sen := NULL]
 
   } else {
-    dt[, sen_id := 1L]
-    dt[, row_id := paste0(row_id, "_1")]
+    dt[, sen_idx := 1L]
   }
 
-  if (!"sen_id" %in% names(dt)) dt[, sen_id := 1L]
-  dt[is.na(sen_id), sen_id := 1L]
+  # --- Create sen_id ---
+  dt[, sen_id := paste0(doc_idx, "_", sen_idx)]
 
-  # Ensure column order
-  cols_order <- c("row_id", "sen_id", "id", "group", "text_orig", "text_clean")
+  # --- Column order ---
+  cols_order <- c("sen_id", "doc_idx", "sen_idx", "doc_id_u", "group", "text_orig", "text_clean")
   cols_exist <- intersect(cols_order, names(dt))
   dt <- dt[, ..cols_exist]
   data.table::setcolorder(dt, cols_exist)
 
-  data.table::setorder(dt, row_id)
+  # --- Sorting ---
+  data.table::setorder(dt, doc_idx, sen_idx)
 
   if (return_string) {
     return(dt$text_clean)
@@ -233,4 +209,5 @@ clean_text <- function(x,
     return(dt[])
   }
 }
+
 
