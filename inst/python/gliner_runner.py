@@ -3,9 +3,21 @@ import torch
 import warnings
 import simdjson
 import json
+import random
+import numpy as np
+import os
 from gliner import GLiNER
+from transformers import logging as hf_logging
 
 warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+
+# --------------------------------------------------
+# Suppress noisy output
+# --------------------------------------------------
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+hf_logging.set_verbosity_error()
 
 # ----------------------------
 # Device setup
@@ -16,6 +28,23 @@ if device == "cuda":
           flush=True)
 else:
     print("[gliner_runner] Using CPU", flush=True)
+
+# ----------------------------
+# Reproducibility setup
+# ----------------------------
+SEED = int(os.environ.get("GLINER_SEED", "42"))
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+print(f"[gliner_runner] Random seed set to {SEED}", flush=True)
 
 # ----------------------------
 # CLI entrypoint

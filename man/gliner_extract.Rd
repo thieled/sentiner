@@ -11,7 +11,7 @@ gliner_extract(
   chunk_factor = 100L,
   model = "urchade/gliner_multi-v2.1",
   env = "r-sentiner",
-  script = NULL,
+  script = system.file("python", "gliner_runner.py", package = "sentiner"),
   save_output_dir = NULL
 )
 }
