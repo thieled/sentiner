@@ -1,13 +1,24 @@
 Package: sentiner
-Title: What the Package Does (One Line, Title Case)
+Title: Targeted Sentiment Analysis with GLiNER and Transformers from R 
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
+    person("Daniel", "Thiele", , "daniel.thiele@fu-berlin.de", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 URL: https://github.com/thieled/sentiner
 BugReports: https://github.com/thieled/sentiner/issues
+Imports: 
+    cli,
+    data.table,
+    emoji,
+    httr,
+    processx,
+    reticulate,
+    stringi,
+    stringr,
+    textclean,
+    tokenizers,
+    yyjsonr
