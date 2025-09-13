@@ -6,6 +6,19 @@ utils::globalVariables(c(
   "row_id",
   "text_clean",
   "text_orig",
-  "sen_id"
+  "sen_id",
+  ".",
+  "..group",
+  "..id",
+  "..keep_cols",
+  "..label",
+  "doc_idx",
+  "ent_id",
+  "ent_idx",
+  "label",
+  "ner_detected",
+  "ner_model",
+  "sen_idx",
+  "split_no"
 ))
 

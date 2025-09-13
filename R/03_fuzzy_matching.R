@@ -16,6 +16,8 @@
 #'
 #' @return A data.table with columns `id` (user-specified name), `label`,
 #'   and optionally the user-specified group column.
+#'
+#' @import data.table
 #' @export
 split_labels <- function(dt,
                          id_col = "id",
