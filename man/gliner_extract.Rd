@@ -11,16 +11,22 @@ gliner_extract(
   chunk_factor = 100L,
   model = "urchade/gliner_multi-v2.1",
   env = "r-sentiner",
-  script = system.file("python", "gliner_runner.py", package = "sentiner"),
-  save_output_dir = NULL
+  script = NULL,
+  save_output_dir = NULL,
+  verbose = TRUE,
+  seed = 42L
 )
 }
 \arguments{
-\item{df}{data.frame with columns 'doc_id' and 'text'}
+\item{df}{data.frame with either:
+\itemize{
+\item Columns \code{doc_id} and \code{text}, or
+\item Output of \code{clean_text()} (with \code{sen_id}, \code{text_clean}).
+}}
 
 \item{labels}{character vector of candidate labels}
 
-\item{batch_size}{integer, batch size for Python GLiNER}
+\item{batch_size}{integer, batch size for Python GLiNER (default 16)}
 
 \item{chunk_factor}{integer, how many batches per Python call (default 100)}
 
@@ -33,10 +39,42 @@ the installed copy in \code{inst/python/gliner_runner.py}}
 
 \item{save_output_dir}{optional directory to keep JSON output files;
 if NULL (default), outputs are deleted after reading}
+
+\item{verbose}{logical, if TRUE (default) print progress updates,
+if FALSE run silently}
+
+\item{seed}{integer, random seed to pass to Python (default 42)}
 }
 \value{
-data.table with entity annotations
+A data.table with columns:
+\itemize{
+\item \code{ent_id}: Unique entity identifier (\code{sen_id_ent_idx}).
+\item \code{sen_id}: Sentence identifier.
+\item \code{doc_idx}: Document index (if available).
+\item \code{sen_idx}: Sentence index (if available).
+\item \code{ent_idx}: Entity index within sentence.
+\item \code{doc_id_u}: Optional user-provided document identifier.
+\item \code{group}: Optional group column if provided.
+\item \code{text_clean}: Cleaned text of the sentence.
+\item \code{entity_name}: Extracted entity string.
+\item \code{label}: Predicted entity label.
+\item \code{score}: Prediction confidence score.
+\item \code{start}: Character start position of the entity.
+\item \code{end}: Character end position of the entity.
+\item \code{ner_model}: Model identifier used.
+\item \code{ner_detected}: POSIXct UTC timestamp of extraction.
+}
 }
 \description{
-Extract entities with GLiNER (Python backend)
+Runs the GLiNER model for Named Entity Recognition (NER) on text data.
+Accepts either:
+\itemize{
+\item A data.frame with columns \code{doc_id} and \code{text}, or
+\item A data.frame produced by \code{clean_text()} (with columns
+\code{sen_id}, \code{doc_idx}, \code{sen_idx}, etc.).
+}
+
+If a \code{clean_text()} data.frame is provided, the function internally
+renames \code{sen_id -> doc_id} and \code{text_clean -> text} for processing,
+then restores the schema and merges metadata back after NER.
 }
