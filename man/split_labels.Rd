@@ -18,11 +18,12 @@ split_labels(
 \arguments{
 \item{dt}{A data.frame or data.table with at least an ID and label column.}
 
-\item{id_col}{Character. Name of the ID column. Default is "id".}
+\item{id_col}{Character. Name of the label-ID column. Default is "id".}
 
 \item{label_col}{Character. Name of the label column. Default is "label".}
 
-\item{group_col}{Character or NULL. Optional group column name. Default is NULL.}
+\item{group_col}{Character or NULL. Optional group column name to be used
+in disambiguation. Default is NULL.}
 
 \item{pattern}{Character regex pattern to split labels. Default is "\\|".}
 
@@ -30,7 +31,7 @@ split_labels(
 
 \item{keep_first}{Logical. Keep only the first split label per row. Default is FALSE.}
 
-\item{disambiguate}{Logical. Remove labels that appear in multiple IDs
+\item{disambiguate}{Logical. Remove labels linked to more than one unique ID
 (globally or within groups). Default is TRUE.}
 }
 \value{

@@ -1,0 +1,366 @@
+
+#' @title Translate Text with Masked Named Entities
+#'
+#' @description
+#' Translates texts while masking named entities to ensure placeholders
+#' are preserved during translation. The function integrates with the
+#' \pkg{easieRnmt} back-end and automatically retries translations if
+#' entity placeholders are lost. It installs and initializes the Python
+#' environment if necessary, masks entities, performs translation, repairs
+#' placeholders, retries failed cases, and finally unmasks entities.
+#'
+#' @param data A data.frame or data.table containing the texts and named entities.
+#' @param text_col Character, name of the text column to translate. Default = `"text_clean"`.
+#' @param entity_col Character, name of the column with target entity names.
+#' Default = `"entity_name"`.
+#' @param id_col Character, name of the identifier column for unique observations.
+#' Default = `"ent_id"`.
+#' @param conda_env_name Character, name of the Conda environment to use for
+#' Python back-end. Default = `"r-sentiner"`.
+#' @param targ_lang Character, target language code for translation.
+#' Default = `"en"`.
+#' @param n_retries Integer, maximum number of retries if placeholders are not
+#' preserved in translation. Default = `3L`.
+#' @param seed Integer, random seed for reproducibility. Default = `42L`.
+#' @param beam_size Integer, beam size for translation decoding. Default = `1L`.
+#' @param deterministic Logical, whether to use deterministic translation
+#' settings. Default = `TRUE`.
+#' @param ... Additional arguments passed to either
+#' \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
+#' arguments are ignored with a warning.
+#'
+#' @details
+#' The function follows a multi-step process:
+#' \enumerate{
+#'   \item Initialize Python back-end with \code{initialize_sentiner()}.
+#'   \item Install \code{EasyNMT} and \code{fasttext} if missing.
+#'   \item Mask named entities in the text with placeholders.
+#'   \item Translate masked texts using \pkg{easieRnmt}.
+#'   \item Repair placeholders to ensure consistent formatting.
+#'   \item Retry translations if placeholders are dropped.
+#'   \item Unmask entities by replacing placeholders with the original names.
+#' }
+#'
+#' Placeholders are preserved in the form \code{"[:XXNEXX:]"} during translation.
+#' If they are lost, the function automatically retries with modified parameters
+#' (incrementing seed and beam size, and setting deterministic = FALSE if retries
+#' exceed two attempts).
+#'
+#' @return A data.table with translations and metadata. Columns include:
+#' \itemize{
+#'   \item \code{id}: Identifier for each text.
+#'   \item \code{translation}: Final translation with entities unmasked.
+#'   \item \code{translation_masked}: Translation with placeholders still present.
+#'   \item \code{lang}, \code{lang_prob}: Detected language and probability.
+#'   \item \code{tl_error}: Any translation errors or retry information.
+#'   \item \code{tl_datetime}, \code{tl_model}: Translation metadata.
+#'   \item Additional columns preserved from the input data.
+#' }
+#'
+#' @seealso \code{\link{initialize_sentiner}}, \code{\link[easieRnmt]{translate}}
+#'
+#' @import data.table
+#' @export
+masked_ent_translate <- function(data,
+                                 text_col = "text_clean",
+                                 entity_col = "entity_name",
+                                 id_col = "ent_id",
+                                 conda_env_name = "r-sentiner",
+                                 targ_lang = "en",
+                                 n_retries = 3L,
+                                 seed = 42L,
+                                 beam_size = 1L,
+                                 deterministic = TRUE,
+                                 ...){
+
+  vmessage <- function(...) if (verbose) message(...)
+
+  if (!requireNamespace("easieRnmt", quietly = TRUE)) {
+    stop("Package 'easieRnmt' is required; please install it by pak::pak('thieled/easieRnmt') (Suggests).")
+  }
+
+  # Handling of dot arguments
+  dots <- list(...)
+  args_init <- dots[names(dots) %in% names(formals(initialize_sentiner))]
+  args_tl <- dots[names(dots) %in% names(formals(easieRnmt::translate))]
+
+  unknown_args <- setdiff(names(dots),
+                          c(names(formals(initialize_sentiner)), names(formals(easieRnmt::translate))))
+  if (length(unknown_args) > 0) {
+    warning("Ignoring unknown arguments: ", paste(unknown_args, collapse = ", "))
+  }
+
+  # Step 1: Python back-end installations -----
+  do.call(initialize_sentiner, c(list(conda_env_name = conda_env_name), args_init)) # Init and pass on ... arguments
+
+  # Check if EasyNMT and fasttext are installed
+  easynmt_avail <- reticulate::py_module_available("easynmt")
+  fasttext_avail <- reticulate::py_module_available("fasttext")
+
+  # Install if EasyNMT or fasttext are not available
+  if (!all(c(easynmt_avail, fasttext_avail))) {
+    vmessage(paste0("Installing EasyNMT and fasttext in: ", conda_env_name))
+
+    # Remove any "force" from args_init
+    args_init_no_force <- args_init[setdiff(names(args_init), "force")]
+
+    # Install easynmt; passing on arguments from '. . .' -- only overriding 'force'
+    do.call(easieRnmt::install_easynmt,
+            c(args_init_no_force, list(conda_env_name = conda_env_name, force = FALSE)))
+  }
+
+  # Step 2: Data preprocessing
+  masked_data <- mask_target(data,
+                             text_col = text_col,
+                             entity_col = entity_col,
+                             id_col = id_col)
+
+  # Step 3: Call Translation
+  easieRnmt::initialize_easynmt(conda_env_name = "r-sentiner")
+
+  # Call translation; (do.call to pass on dot arguments)
+  tl_res <- do.call(easieRnmt::translate, c(list(x = masked_data,
+                                                 text_col = "text_masked",
+                                                 id_col = "id",
+                                                 targ_lang = targ_lang,
+                                                 check_translation = T,
+                                                 n_retries = n_retries,
+                                                 seed = seed,
+                                                 beam_size = beam_size,
+                                                 deterministic = deterministic
+  ),
+  args_tl))
+
+  # Merge translation to masked datatable
+  masked_data_tl <- merge(masked_data,
+                          tl_res[,.(id, lang, lang_prob, translation, tl_error, tl_datetime, tl_model)],
+                          by = "id", all.x = TRUE
+  )
+
+  # Step 4: Placeholder replacement
+
+  # Helper function to repair placeholders
+  repair_placeholders <- function(x, placeholder = "[:XXNEXX:]") {
+    # cores we accept
+    cores <- c("XXNEXX", "XXNE", "XNEX", "NEXX", "XNE")
+    core_regex <- paste0("(?:", paste(cores, collapse = "|"), ")")
+
+    # Regex: opening bracket/colon, optional spaces/X,
+    # core, optional spaces/X, then closing bracket/colon
+    full_regex <- paste0(
+      "\\[?[: ]*X*?",     # optional opener with Xs
+      core_regex,
+      "X*[: ]*\\]?"       # optional trailer with Xs
+    )
+
+    stringi::stri_replace_all_regex(
+      x,
+      pattern     = full_regex,
+      replacement = placeholder
+    )
+  }
+
+  # Fix placeholders
+  masked_data_tl[, tl_fixed := repair_placeholders(translation)]
+
+  # Count placeholders in original text and preserved placeholders
+  masked_data_tl[, n_og_ph := stringi::stri_count_fixed(
+    text_masked,
+    pattern = placeholder
+  )][, n_tl_ph := stringi::stri_count_fixed(
+    tl_fixed,
+    pattern = placeholder
+  )][,
+     n_diff_ph := n_og_ph - n_tl_ph
+  ]
+
+  # Step 5: Retries for failures to preserve placeholder
+
+  # Split data in successfully preserved and failure
+  success_tl_dt  <- masked_data_tl[n_diff_ph == 0]
+  failed_tl_dt  <- masked_data_tl[n_diff_ph != 0]
+
+  retry_count <- 1L
+
+  # Retry counter
+  while(nrow(failed_tl_dt) >= 1 && retry_count <= n_retries){
+
+    n_retry <- nrow(failed_tl_dt)
+
+    vmessage(paste0("Retrying translation for n = ", n_retry, " texts where entity-placeholder was not preserved."))
+
+    seed = seed + 1L
+    beam_size = beam_size + 1L
+
+    if(retry_count > 2) deterministic = FALSE
+
+    # Call translation; (do.call to pass on dot arguments)
+    retry_tl_res <- do.call(easieRnmt::translate, c(list(x = failed_tl_dt,
+                                                         text_col = "text_masked",
+                                                         id_col = "id",
+                                                         targ_lang = targ_lang,
+                                                         check_translation = T,
+                                                         n_retries = n_retries,
+                                                         seed = seed,
+                                                         beam_size = beam_size,
+                                                         deterministic = deterministic
+    ),
+    args_tl))
+
+    # Merge translation to masked datatable
+    retry_masked_data_tl <- merge(masked_data,
+                                  retry_tl_res[,.(id, lang, lang_prob, translation, tl_error, tl_datetime, tl_model)],
+                                  by = "id", all.y = TRUE
+    )
+
+    # Fix placeholders
+    retry_masked_data_tl[, tl_fixed := repair_placeholders(translation)]
+
+    # Count placeholders in original text and preserved placeholders
+    retry_masked_data_tl[, n_og_ph := stringi::stri_count_fixed(
+      text_masked,
+      pattern = placeholder
+    )][, n_tl_ph := stringi::stri_count_fixed(
+      tl_fixed,
+      pattern = placeholder
+    )][,
+       n_diff_ph := n_og_ph - n_tl_ph
+    ]
+
+    # Split data in successfully preserved and failure
+    retry_success_tl_dt  <- retry_masked_data_tl[n_diff_ph == 0]
+    failed_tl_dt  <- retry_masked_data_tl[n_diff_ph != 0]
+
+    # Store retry info for successful ones
+    retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",  retry_count, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
+
+    # Merge successful retries to success_dt
+    success_tl_dt <- data.table::rbindlist(list(success_tl_dt, retry_success_tl_dt), use.names = T, fill = T)
+
+    # Update count
+    retry_count <- retry_count + 1L
+
+  }
+
+  # Store retry info for failed ones
+  failed_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",  retry_count - 1L, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
+
+  n_failures <- sum(failed_tl_dt$n_diff_ph)
+
+  vmessage(paste0("Remaining non-preserved placeholders in n = ", n_retry, " observations."))
+
+  # Merge successful retries to success_dt
+  out_dt <- data.table::rbindlist(list(success_tl_dt, failed_tl_dt), use.names = T, fill = T)
+
+  # Set order
+  out_dt <- out_dt[order(match(id, masked_data_tl$id))]
+
+  # --- Step 6: Unmasking Named Entities ---
+
+  # Masking: Replace the target by placeholder:
+  out_dt[, translation := stringi::stri_replace_all_fixed(
+    tl_fixed,
+    pattern = placeholder,
+    replacement = target,
+    vectorize_all = TRUE
+  )][, translation_masked := tl_fixed][, c("text_masked", "n_og_ph", "n_tl_ph") := NULL]
+
+
+  # return
+  return(out_dt)
+
+}
+
+
+
+
+#' @title Mask Target Entities in Text
+#'
+#' @description
+#' Replaces target entities in a text column with a standardized placeholder,
+#' ensuring they can be preserved during downstream translation or processing.
+#' The function checks for required columns, issues a warning if texts contain
+#' more than three sentences, and outputs both original and masked text.
+#'
+#' @param data A data.frame or data.table containing the texts and target entities.
+#' @param text_col Character, name of the text column. Default = `"text_clean"`.
+#' @param entity_colCharacter, name of the column containing the entity names
+#' to be masked. Default = `"entity_name"`.
+#' @param id_col Character, name of the identifier column for each entity.
+#' Default = `"ent_id"`.
+#' @param placeholder Character, placeholder string to replace entities in the text.
+#' Default = `"[:XXNEXX:]"`.
+#' @param verbose Logical, whether to print warnings and alerts. Default = `TRUE`.
+#'
+#' @details
+#' The function ensures the required columns \code{text}, \code{target}, and
+#' \code{id} are present. If these columns are missing, it attempts to rename
+#' user-specified alternatives via \code{text_col}, \code{entity_col}, and
+#' \code{id_col}.
+#'
+#' It also checks whether any text contains more than three sentences using
+#' \code{tokenizers::count_sentences()}. If so, a warning is displayed suggesting
+#' that the text should be preprocessed with \code{sentiner::clean_text()}.
+#'
+#' The entity masking replaces all occurrences of the target entity with the
+#' specified placeholder string, producing a new column \code{text_masked}.
+#'
+#' @return A data.table with at least the following columns:
+#' \itemize{
+#'   \item \code{text}: Original text.
+#'   \item \code{target}: Entity name to be masked.
+#'   \item \code{id}: Identifier for the entity.
+#'   \item \code{text_masked}: Text with the entity replaced by the placeholder.
+#'   \item \code{n_sen}: Number of sentences in the original text.
+#' }
+#'
+#' @seealso \code{\link{clean_text}}, \code{\link{masked_ent_translate}}
+#'
+#' @import data.table
+#' @export
+mask_target <- function(data,
+                        text_col = "text_clean",
+                        entity_col= "entity_name",
+                        id_col = "ent_id",
+                        placeholder = "[:XXNEXX:]",
+                        verbose = T){
+
+  # Create a copy of data
+  data <- data.table::as.data.table(data)
+  data <- data.table::copy(data)
+
+  # Ensure required columns are present or rename using alternative names
+  required_columns <- c("text", "target", "id")
+  alternative_names <- list(id = id_col, target = entity_col, text = text_col)
+
+  missing_columns <- setdiff(required_columns, names(data))
+
+  for (col in missing_columns) {
+    alt_name <- alternative_names[[col]]
+
+    assertthat::assert_that(!is.null(alt_name),
+                            msg = paste0("'", col, "' not specified and not found in 'data'."))
+    assertthat::assert_that(alt_name %in% names(data),
+                            msg = paste0("Alternative name for '", col, "' provided but not found in 'data'."))
+
+    data.table::setnames(data, old = alt_name, new = col)
+  }
+
+  # Warn user if text is not sufficiently clean:
+  data[, n_sen := tokenizers::count_sentences(text)]
+  if(max(data$n_sen, na.rm = T) > 3) {
+    if(verbose) cli::cli_alert("Alert: Text contains observations of more than 3 sentences.
+                                        Consider preprocessing with sentiner::clean_text().")
+  }
+
+  # Masking: Replace the target by placeholder:
+  data[, text_masked := stringi::stri_replace_all_fixed(
+    text,
+    pattern = target,
+    replacement = placeholder,
+    vectorize_all = TRUE
+  )]
+
+  return(data)
+
+}

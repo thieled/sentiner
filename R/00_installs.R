@@ -442,8 +442,29 @@ initialize_sentiner <- function(python_version = "3.11",
 
   vmessage <- function(...) if (verbose) message(...)
 
+
+  ## Helper:
+  get_python_module_version <- function(module, conda_env_name) {
+      out <- processx::run(
+        "conda",
+        c("run", "-n", conda_env_name,
+          "python", "-c", sprintf("import %s; print(%s.__version__)", module, module)),
+        echo = FALSE,
+        error_on_status = FALSE
+      )$stdout
+
+      # Clean up output: remove CR/LF and trim
+      version <- gsub("[\r\n]", "", out)
+      version <- trimws(version)
+
+      if (nzchar(version)) version else NA_character_
+    }
+
+
   if (!is.null(options("sentiner_initialized")$sentiner_initialized)) {
     vmessage("r-sentiner environment is already initialized.")
+    gliner_version <- get_python_module_version("gliner", conda_env_name)
+
   } else {
 
     install_conda_env(python_version = python_version,
@@ -461,22 +482,6 @@ initialize_sentiner <- function(python_version = "3.11",
     }
 
     # Check if gliner is available -- Note: due to a dll issue on Windows, this is hacky
-    get_python_module_version <- function(module, conda_env_name) {
-      out <- processx::run(
-        "conda",
-        c("run", "-n", conda_env_name,
-          "python", "-c", sprintf("import %s; print(%s.__version__)", module, module)),
-        echo = FALSE,
-        error_on_status = FALSE
-      )$stdout
-
-      # Clean up output: remove CR/LF and trim
-      version <- gsub("[\r\n]", "", out)
-      version <- trimws(version)
-
-      if (nzchar(version)) version else NA_character_
-    }
-
     gliner_version <- get_python_module_version("gliner", conda_env_name)
 
     if (is.null(gliner_version)) {

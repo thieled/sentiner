@@ -13,6 +13,7 @@ clean_text(
   replace_alphaless = TRUE,
   max_char = 2000,
   tokenize_sentences = TRUE,
+  max_words = 30,
   return_string = FALSE,
   verbose = TRUE
 )
@@ -41,6 +42,9 @@ than this are truncated. Default = 2000.}
 \item{tokenize_sentences}{Logical, whether to split texts with more than
 3 sentences into individual sentences. Default = TRUE.}
 
+\item{max_words}{Integer, maximum number of words per sentence or chunk.
+Long sentences are split into chunks of this size. Default = 30.}
+
 \item{return_string}{Logical, if TRUE, return only the cleaned character
 vector (\code{text_clean}) instead of a full data.table. Default = FALSE.}
 
@@ -65,7 +69,7 @@ The returned data.table contains the following columns in fixed order:
 \item \code{sen_id}: Unique identifier for each sentence row, constructed
 as \code{<doc_idx>_<sen_idx>}.
 \item \code{doc_idx}: Row index of the original document in the input.
-\item \code{sen_idx}: Sentence index within each document (1 for non-tokenized).
+\item \code{sen_idx}: Sentence/chunk index within each document.
 \item \code{doc_id_u}: Optional user-provided identifier, if \code{id_col} is given.
 \item \code{group}: Optional grouping column, if \code{group_col} is given.
 \item \code{text_orig}: Original text before cleaning.
