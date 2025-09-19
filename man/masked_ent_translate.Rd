@@ -8,6 +8,7 @@ masked_ent_translate(
   data,
   text_col = "text_clean",
   entity_col = "entity_name",
+  placeholder = "[:XXNEXX:]",
   id_col = "ent_id",
   conda_env_name = "r-sentiner",
   targ_lang = "en",
@@ -15,6 +16,8 @@ masked_ent_translate(
   seed = 42L,
   beam_size = 1L,
   deterministic = TRUE,
+  prob_threshold = 0.25,
+  verbose = TRUE,
   ...
 )
 }
@@ -25,6 +28,10 @@ masked_ent_translate(
 
 \item{entity_col}{Character, name of the column with target entity names.
 Default = \code{"entity_name"}.}
+
+\item{placeholder}{Character, placeholder string to replace entities in the text.
+Repairing is only applied if this equals (after trimming) \code{"[:XXNEXX:]"}.
+Default = \code{"[:XXNEXX:]"}.}
 
 \item{id_col}{Character, name of the identifier column for unique observations.
 Default = \code{"ent_id"}.}
@@ -44,6 +51,11 @@ preserved in translation. Default = \code{3L}.}
 
 \item{deterministic}{Logical, whether to use deterministic translation
 settings. Default = \code{TRUE}.}
+
+\item{prob_threshold}{Numeric, threshold below which the detected language is replaced
+by \code{targ_lang} (or by the user-provided \code{lang_guess}). Default = 0.25.}
+
+\item{verbose}{Logical, whether to print progress messages. Default = \code{TRUE}.}
 
 \item{...}{Additional arguments passed to either
 \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
@@ -67,7 +79,8 @@ are preserved during translation. The function integrates with the
 \pkg{easieRnmt} back-end and automatically retries translations if
 entity placeholders are lost. It installs and initializes the Python
 environment if necessary, masks entities, performs translation, repairs
-placeholders, retries failed cases, and finally unmasks entities.
+placeholders (only for \code{"[:XXNEXX:]"}), retries failed cases, and
+finally unmasks entities.
 }
 \details{
 The function follows a multi-step process:
@@ -76,15 +89,13 @@ The function follows a multi-step process:
 \item Install \code{EasyNMT} and \code{fasttext} if missing.
 \item Mask named entities in the text with placeholders.
 \item Translate masked texts using \pkg{easieRnmt}.
-\item Repair placeholders to ensure consistent formatting.
-\item Retry translations if placeholders are dropped.
+\item Optionally repair placeholders (only if placeholder is
+\code{"[:XXNEXX:]"}).
+\item Retry translations if placeholders are dropped, incrementing
+seed and beam size, and setting \code{deterministic = FALSE} after
+two retries.
 \item Unmask entities by replacing placeholders with the original names.
 }
-
-Placeholders are preserved in the form \code{"[:XXNEXX:]"} during translation.
-If they are lost, the function automatically retries with modified parameters
-(incrementing seed and beam size, and setting deterministic = FALSE if retries
-exceed two attempts).
 }
 \seealso{
 \code{\link{initialize_sentiner}}, \code{\link[easieRnmt]{translate}}

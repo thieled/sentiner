@@ -7,12 +7,16 @@
 #' \pkg{easieRnmt} back-end and automatically retries translations if
 #' entity placeholders are lost. It installs and initializes the Python
 #' environment if necessary, masks entities, performs translation, repairs
-#' placeholders, retries failed cases, and finally unmasks entities.
+#' placeholders (only for \code{"[:XXNEXX:]"}), retries failed cases, and
+#' finally unmasks entities.
 #'
 #' @param data A data.frame or data.table containing the texts and named entities.
 #' @param text_col Character, name of the text column to translate. Default = `"text_clean"`.
 #' @param entity_col Character, name of the column with target entity names.
 #' Default = `"entity_name"`.
+#' @param placeholder Character, placeholder string to replace entities in the text.
+#' Repairing is only applied if this equals (after trimming) \code{"[:XXNEXX:]"}.
+#' Default = `"[:XXNEXX:]"`.
 #' @param id_col Character, name of the identifier column for unique observations.
 #' Default = `"ent_id"`.
 #' @param conda_env_name Character, name of the Conda environment to use for
@@ -25,6 +29,9 @@
 #' @param beam_size Integer, beam size for translation decoding. Default = `1L`.
 #' @param deterministic Logical, whether to use deterministic translation
 #' settings. Default = `TRUE`.
+#' @param prob_threshold Numeric, threshold below which the detected language is replaced
+#' by `targ_lang` (or by the user-provided \code{lang_guess}). Default = 0.25.
+#' @param verbose Logical, whether to print progress messages. Default = `TRUE`.
 #' @param ... Additional arguments passed to either
 #' \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
 #' arguments are ignored with a warning.
@@ -36,15 +43,13 @@
 #'   \item Install \code{EasyNMT} and \code{fasttext} if missing.
 #'   \item Mask named entities in the text with placeholders.
 #'   \item Translate masked texts using \pkg{easieRnmt}.
-#'   \item Repair placeholders to ensure consistent formatting.
-#'   \item Retry translations if placeholders are dropped.
+#'   \item Optionally repair placeholders (only if placeholder is
+#'   \code{"[:XXNEXX:]"}).
+#'   \item Retry translations if placeholders are dropped, incrementing
+#'   seed and beam size, and setting \code{deterministic = FALSE} after
+#'   two retries.
 #'   \item Unmask entities by replacing placeholders with the original names.
 #' }
-#'
-#' Placeholders are preserved in the form \code{"[:XXNEXX:]"} during translation.
-#' If they are lost, the function automatically retries with modified parameters
-#' (incrementing seed and beam size, and setting deterministic = FALSE if retries
-#' exceed two attempts).
 #'
 #' @return A data.table with translations and metadata. Columns include:
 #' \itemize{
@@ -64,6 +69,7 @@
 masked_ent_translate <- function(data,
                                  text_col = "text_clean",
                                  entity_col = "entity_name",
+                                 placeholder = "[:XXNEXX:]",
                                  id_col = "ent_id",
                                  conda_env_name = "r-sentiner",
                                  targ_lang = "en",
@@ -71,6 +77,8 @@ masked_ent_translate <- function(data,
                                  seed = 42L,
                                  beam_size = 1L,
                                  deterministic = TRUE,
+                                 prob_threshold = 0.25,
+                                 verbose = TRUE,
                                  ...){
 
   vmessage <- function(...) if (verbose) message(...)
@@ -127,7 +135,8 @@ masked_ent_translate <- function(data,
                                                  n_retries = n_retries,
                                                  seed = seed,
                                                  beam_size = beam_size,
-                                                 deterministic = deterministic
+                                                 deterministic = deterministic,
+                                                 prob_threshold = prob_threshold
   ),
   args_tl))
 
@@ -178,7 +187,7 @@ masked_ent_translate <- function(data,
 
   # Split data in successfully preserved and failure
   success_tl_dt  <- masked_data_tl[n_diff_ph == 0]
-  failed_tl_dt  <- masked_data_tl[n_diff_ph != 0]
+  failed_tl_dt  <- masked_data_tl[n_diff_ph != 0 | is.na(n_diff_ph)]
 
   retry_count <- 1L
 
@@ -191,6 +200,7 @@ masked_ent_translate <- function(data,
 
     seed = seed + 1L
     beam_size = beam_size + 1L
+    prob_threshold = prob_threshold + 0.1
 
     if(retry_count > 2) deterministic = FALSE
 
@@ -203,7 +213,8 @@ masked_ent_translate <- function(data,
                                                          n_retries = n_retries,
                                                          seed = seed,
                                                          beam_size = beam_size,
-                                                         deterministic = deterministic
+                                                         deterministic = deterministic,
+                                                         prob_threshold = prob_threshold
     ),
     args_tl))
 
@@ -229,10 +240,11 @@ masked_ent_translate <- function(data,
 
     # Split data in successfully preserved and failure
     retry_success_tl_dt  <- retry_masked_data_tl[n_diff_ph == 0]
-    failed_tl_dt  <- retry_masked_data_tl[n_diff_ph != 0]
+    failed_tl_dt  <- retry_masked_data_tl[n_diff_ph != 0 | is.na(n_diff_ph)]
 
     # Store retry info for successful ones
-    retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",  retry_count, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
+    retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",
+                                             retry_count, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
 
     # Merge successful retries to success_dt
     success_tl_dt <- data.table::rbindlist(list(success_tl_dt, retry_success_tl_dt), use.names = T, fill = T)
@@ -243,7 +255,8 @@ masked_ent_translate <- function(data,
   }
 
   # Store retry info for failed ones
-  failed_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",  retry_count - 1L, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
+  failed_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",
+                                    retry_count - 1L, "; seed: ", seed, "; beam-size: ", beam_size, "; ", tl_error)]
 
   n_failures <- sum(failed_tl_dt$n_diff_ph)
 
@@ -263,8 +276,23 @@ masked_ent_translate <- function(data,
     pattern = placeholder,
     replacement = target,
     vectorize_all = TRUE
-  )][, translation_masked := tl_fixed][, c("text_masked", "n_og_ph", "n_tl_ph") := NULL]
+  )][, translation_masked := tl_fixed][, c("text_masked", "n_og_ph", "n_tl_ph", "tl_fixed") := NULL]
 
+
+  # Step 7: Cleaning up columns
+  data.table::setnames(out_dt, "n_diff_ph", "n_placeholders_missing")
+
+  # enforce last columns in desired order if they exist
+  last_cols <- c("lang", "lang_prob",
+                 "translation_masked", "translation",
+                 "tl_error", "tl_datetime", "tl_model",
+                 "n_placeholders_missing")
+  exist_last <- intersect(last_cols, names(out_dt))
+
+  # everything else before
+  first_cols <- setdiff(names(out_dt), exist_last)
+
+  data.table::setcolorder(out_dt, c(first_cols, exist_last))
 
   # return
   return(out_dt)
@@ -284,7 +312,7 @@ masked_ent_translate <- function(data,
 #'
 #' @param data A data.frame or data.table containing the texts and target entities.
 #' @param text_col Character, name of the text column. Default = `"text_clean"`.
-#' @param entity_colCharacter, name of the column containing the entity names
+#' @param entity_col Character, name of the column containing the entity names
 #' to be masked. Default = `"entity_name"`.
 #' @param id_col Character, name of the identifier column for each entity.
 #' Default = `"ent_id"`.

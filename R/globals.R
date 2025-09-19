@@ -49,6 +49,8 @@ utils::globalVariables(c(
   "translation_masked",
   "verbose",
   "text",
-  "entity_col"
+  "entity_col",
+  "..merge_cols",
+  "__rowid__"
 ))
 

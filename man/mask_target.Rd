@@ -18,6 +18,9 @@ mask_target(
 
 \item{text_col}{Character, name of the text column. Default = \code{"text_clean"}.}
 
+\item{entity_col}{Character, name of the column containing the entity names
+to be masked. Default = \code{"entity_name"}.}
+
 \item{id_col}{Character, name of the identifier column for each entity.
 Default = \code{"ent_id"}.}
 
@@ -25,9 +28,6 @@ Default = \code{"ent_id"}.}
 Default = \code{"[:XXNEXX:]"}.}
 
 \item{verbose}{Logical, whether to print warnings and alerts. Default = \code{TRUE}.}
-
-\item{entity_colCharacter, }{name of the column containing the entity names
-to be masked. Default = \code{"entity_name"}.}
 }
 \value{
 A data.table with at least the following columns:
