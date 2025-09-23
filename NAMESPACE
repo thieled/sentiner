@@ -2,6 +2,7 @@
 
 export(clean_text)
 export(contextualize_sentences)
+export(fuzzy_filter)
 export(fuzzy_match_df)
 export(gliner_extract)
 export(initialize_sentiner)
