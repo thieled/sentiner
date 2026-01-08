@@ -18,7 +18,7 @@
 #' Repairing is only applied if this equals (after trimming) \code{"[:XXNEXX:]"}.
 #' Default = `"[:XXNEXX:]"`.
 #' @param id_col Character, name of the identifier column for unique observations.
-#' Default = `"ent_id"`.
+#' Default = `"id"`.
 #' @param conda_env_name Character, name of the Conda environment to use for
 #' Python back-end. Default = `"r-sentiner"`.
 #' @param targ_lang Character, target language code for translation.
@@ -70,7 +70,7 @@ masked_ent_translate <- function(data,
                                  text_col = "text_clean",
                                  entity_col = "entity_name",
                                  placeholder = "[:XXNEXX:]",
-                                 id_col = "ent_id",
+                                 id_col = "id",
                                  conda_env_name = "r-sentiner",
                                  targ_lang = "en",
                                  n_retries = 3L,
@@ -315,7 +315,7 @@ masked_ent_translate <- function(data,
 #' @param entity_col Character, name of the column containing the entity names
 #' to be masked. Default = `"entity_name"`.
 #' @param id_col Character, name of the identifier column for each entity.
-#' Default = `"ent_id"`.
+#' Default = `"id"`.
 #' @param placeholder Character, placeholder string to replace entities in the text.
 #' Default = `"[:XXNEXX:]"`.
 #' @param verbose Logical, whether to print warnings and alerts. Default = `TRUE`.
@@ -349,7 +349,7 @@ masked_ent_translate <- function(data,
 mask_target <- function(data,
                         text_col = "text_clean",
                         entity_col= "entity_name",
-                        id_col = "ent_id",
+                        id_col = "id",
                         placeholder = "[:XXNEXX:]",
                         verbose = T){
 

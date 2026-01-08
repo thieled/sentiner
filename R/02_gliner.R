@@ -33,8 +33,8 @@
 #'
 #' @return A data.table with columns:
 #' \itemize{
-#'   \item \code{ent_id}: Unique entity identifier (\code{sen_id_ent_idx}).
-#'   \item \code{sen_id}: Sentence identifier.
+#'   \item \code{id}: Unique entity identifier: \code{doc_idx} + \code{sen_idx} + \code{ent_idx}.
+#'   \item \code{sen_id}: Sentence identifier: \code{doc_idx} + \code{sen_idx}
 #'   \item \code{doc_idx}: Document index (if available).
 #'   \item \code{sen_idx}: Sentence index (if available).
 #'   \item \code{ent_idx}: Entity index within sentence.
@@ -143,8 +143,8 @@ gliner_extract <- function(df, labels,
                        skip_absent = TRUE
   )
 
-  # add ent_id
-  res[, ent_id := paste0(sen_id, "_", ent_idx)]
+  # add id
+  res[, id := paste0(sen_id, "_", ent_idx)]
 
   # merge metadata if from clean_text
   if (from_clean_text) {
@@ -163,7 +163,7 @@ gliner_extract <- function(df, labels,
 
   # enforce column order
   cols_order <- c(
-    "ent_id", "sen_id", "doc_idx", "sen_idx", "ent_idx",
+    "id", "sen_id", "doc_idx", "sen_idx", "ent_idx",
     "doc_id_u", "group", "text_clean",
     "entity_name", "label", "score", "start", "end",
     "ner_model", "ner_detected"

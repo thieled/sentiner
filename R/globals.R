@@ -13,7 +13,7 @@ utils::globalVariables(c(
   "..keep_cols",
   "..label",
   "doc_idx",
-  "ent_id",
+  "id",
   "ent_idx",
   "label",
   "ner_detected",

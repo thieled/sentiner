@@ -616,13 +616,13 @@ fuzzy_match_df <- function(
 #' @inheritParams fuzzy_match_df
 #' @param input A data.frame or data.table containing NER output, typically from
 #'   [gliner_extract()]. Must include a column matching `input_id_col`
-#'   (default `"ent_id"`).
+#'   (default `"id"`).
 #' @param keep_na Logical. Keep rows where `fuzzy_match_df()` returned `NA`
 #'   in column `input`? Default FALSE.
 #'
 #' @return A data.table with columns:
 #'   \itemize{
-#'     \item `<input_id_col>` – entity ID from `input` (default `ent_id`).
+#'     \item `<input_id_col>` – entity ID from `input` (default `id`).
 #'     \item `matched_target` – best-matched label from `target`.
 #'     \item `<target_id_col>` – preserved if supplied.
 #'     \item `match_distance` – string distance to the matched label.
@@ -636,7 +636,7 @@ fuzzy_filter <- function(
     input,
     target,
     input_col = "entity_name",
-    input_id_col  = "ent_id",
+    input_id_col  = "id",
     target_col,
     target_id_col = NULL,
     group_vars = NULL,
