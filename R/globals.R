@@ -51,6 +51,13 @@ utils::globalVariables(c(
   "text",
   "entity_col",
   "..merge_cols",
-  "__rowid__"
+  "__rowid__",
+  "input_id",
+  "matched_target",
+  "sentiment",
+  "sentiment_confidence",
+  "sentiment_datetime",
+  "sentiment_model"
+
 ))
 

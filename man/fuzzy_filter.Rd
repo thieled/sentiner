@@ -8,7 +8,7 @@ fuzzy_filter(
   input,
   target,
   input_col = "entity_name",
-  input_id_col = "ent_id",
+  input_id_col = "id",
   target_col,
   target_id_col = NULL,
   group_vars = NULL,
@@ -28,7 +28,7 @@ fuzzy_filter(
 \arguments{
 \item{input}{A data.frame or data.table containing NER output, typically from
 \code{\link[=gliner_extract]{gliner_extract()}}. Must include a column matching \code{input_id_col}
-(default \code{"ent_id"}).}
+(default \code{"id"}).}
 
 \item{target}{A data frame containing the harmonized labels.}
 
@@ -84,7 +84,7 @@ in column \code{input}? Default FALSE.}
 \value{
 A data.table with columns:
 \itemize{
-\item \verb{<input_id_col>} – entity ID from \code{input} (default \code{ent_id}).
+\item \verb{<input_id_col>} – entity ID from \code{input} (default \code{id}).
 \item \code{matched_target} – best-matched label from \code{target}.
 \item \verb{<target_id_col>} – preserved if supplied.
 \item \code{match_distance} – string distance to the matched label.

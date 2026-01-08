@@ -48,8 +48,8 @@ if FALSE run silently}
 \value{
 A data.table with columns:
 \itemize{
-\item \code{ent_id}: Unique entity identifier (\code{sen_id_ent_idx}).
-\item \code{sen_id}: Sentence identifier.
+\item \code{id}: Unique entity identifier: \code{doc_idx} + \code{sen_idx} + \code{ent_idx}.
+\item \code{sen_id}: Sentence identifier: \code{doc_idx} + \code{sen_idx}
 \item \code{doc_idx}: Document index (if available).
 \item \code{sen_idx}: Sentence index (if available).
 \item \code{ent_idx}: Entity index within sentence.

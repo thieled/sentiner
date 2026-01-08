@@ -9,7 +9,7 @@ masked_ent_translate(
   text_col = "text_clean",
   entity_col = "entity_name",
   placeholder = "[:XXNEXX:]",
-  id_col = "ent_id",
+  id_col = "id",
   conda_env_name = "r-sentiner",
   targ_lang = "en",
   n_retries = 3L,
@@ -34,7 +34,7 @@ Repairing is only applied if this equals (after trimming) \code{"[:XXNEXX:]"}.
 Default = \code{"[:XXNEXX:]"}.}
 
 \item{id_col}{Character, name of the identifier column for unique observations.
-Default = \code{"ent_id"}.}
+Default = \code{"id"}.}
 
 \item{conda_env_name}{Character, name of the Conda environment to use for
 Python back-end. Default = \code{"r-sentiner"}.}

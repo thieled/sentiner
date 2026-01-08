@@ -8,7 +8,7 @@ mask_target(
   data,
   text_col = "text_clean",
   entity_col = "entity_name",
-  id_col = "ent_id",
+  id_col = "id",
   placeholder = "[:XXNEXX:]",
   verbose = T
 )
@@ -22,7 +22,7 @@ mask_target(
 to be masked. Default = \code{"entity_name"}.}
 
 \item{id_col}{Character, name of the identifier column for each entity.
-Default = \code{"ent_id"}.}
+Default = \code{"id"}.}
 
 \item{placeholder}{Character, placeholder string to replace entities in the text.
 Default = \code{"[:XXNEXX:]"}.}
