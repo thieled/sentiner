@@ -28,7 +28,6 @@ get_targeted_sentiment <- function(data,
                                  id_col = "id",
                                  conda_env_name = "r-sentiner",
                                  verbose = TRUE,
-
                                  model = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0", 
                                  batch_size = 32L,
                                  entailment_index = 0L,
