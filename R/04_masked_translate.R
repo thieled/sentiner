@@ -201,7 +201,9 @@ masked_ent_translate <- function(data,
     vmessage(paste0("Retrying translation for n = ", n_retry, " texts where entity-placeholder was not preserved."))
 
     seed = seed + 1L
+
     beam_size = beam_size + 1L
+    if(beam_size > 2L) beam_size = 2L # cap beam size at 2 to avoid OOM
     prob_threshold = prob_threshold + 0.1
 
     if(retry_count > 2) deterministic = FALSE
