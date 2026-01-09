@@ -191,6 +191,8 @@ masked_ent_translate <- function(data,
 
   retry_count <- 1L
 
+  n_retry <- nrow(failed_tl_dt)
+
   # Retry counter
   while(nrow(failed_tl_dt) >= 1 && retry_count <= n_retries){
 
@@ -260,7 +262,11 @@ masked_ent_translate <- function(data,
 
   n_failures <- sum(failed_tl_dt$n_diff_ph)
 
-  vmessage(paste0("Remaining non-preserved placeholders in n = ", n_retry, " observations."))
+  vmessage(paste0(
+    "Remaining non-preserved placeholders in n = ",
+    nrow(failed_tl_dt),
+    " observations."
+  ))
 
   # Merge successful retries to success_dt
   out_dt <- data.table::rbindlist(list(success_tl_dt, failed_tl_dt), use.names = T, fill = T)
