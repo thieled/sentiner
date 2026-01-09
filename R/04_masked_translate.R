@@ -208,19 +208,35 @@ masked_ent_translate <- function(data,
 
     if(retry_count > 2) deterministic = FALSE
 
+    # Isolate save_dir per retry attempt (if provided)
+    args_tl_run <- args_tl
+    if (n_retries > 1L && "save_dir" %in% names(args_tl_run) && !is.null(args_tl_run$save_dir)) {
+      save_dir_try <- base::file.path(args_tl_run$save_dir, paste0("try_", retry_count))
+      if (!base::dir.exists(save_dir_try)) {
+        base::dir.create(save_dir_try, recursive = TRUE, showWarnings = FALSE)
+      }
+      args_tl_run$save_dir <- save_dir_try
+    }
+
     # Call translation; (do.call to pass on dot arguments)
-    retry_tl_res <- do.call(easieRnmt::translate, c(list(x = failed_tl_dt,
-                                                         text_col = "text_masked",
-                                                         id_col = "id",
-                                                         targ_lang = targ_lang,
-                                                         check_translation = T,
-                                                         n_retries = n_retries,
-                                                         seed = seed,
-                                                         beam_size = beam_size,
-                                                         deterministic = deterministic,
-                                                         prob_threshold = prob_threshold
-    ),
-    args_tl))
+    retry_tl_res <- do.call(
+      easieRnmt::translate,
+      c(
+        list(
+          x = failed_tl_dt,
+          text_col = "text_masked",
+          id_col = "id",
+          targ_lang = targ_lang,
+          check_translation = TRUE,
+          n_retries = n_retries,
+          seed = seed,
+          beam_size = beam_size,
+          deterministic = deterministic,
+          prob_threshold = prob_threshold
+        ),
+        args_tl_run
+      )
+    )
 
     # Merge translation to masked datatable
     retry_masked_data_tl <- merge(masked_data,
