@@ -265,7 +265,7 @@ clean_text <- function(x,
   if (tokenize_sentences) {
     vmessage("Tokenizing long texts into sentences and chunks...")
 
-    tokenized_list <- tokenizers::tokenize_sentences(dt$text_clean)
+    tokenized_list <- tokenizers::tokenize_sentences(dt$text_clean, lowercase = FALSE, strip_punct = FALSE)
 
     tokenized_dt <- data.table::rbindlist(
       lapply(seq_along(tokenized_list), function(i) {
@@ -274,7 +274,9 @@ clean_text <- function(x,
         # further split long sentences by max_words
         sents_split <- unlist(lapply(seq_along(sents), function(j) {
           if (tokenizers::count_words(sents[j]) > max_words) {
-            unlist(tokenizers::chunk_text(sents[j], doc_id = paste0(i, "_", j), chunk_size = max_words))
+            unlist(tokenizers::chunk_text(sents[j], doc_id = paste0(i, "_", j),
+                                          chunk_size = max_words,
+                                          lowercase = FALSE, strip_punct = FALSE))
           } else {
             sents[j]
           }
