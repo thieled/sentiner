@@ -18,6 +18,7 @@ masked_ent_translate(
   deterministic = TRUE,
   prob_threshold = 0.25,
   verbose = TRUE,
+  save_dir = NULL,
   ...
 )
 }

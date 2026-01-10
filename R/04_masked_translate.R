@@ -231,9 +231,14 @@ masked_ent_translate <- function(data,
     beam_size = beam_size + 1L
     if(beam_size > 2L) beam_size = 2L # cap beam size at 2 to avoid OOM
     prob_threshold = prob_threshold + 0.1
-
     if(retry_count > 2) deterministic = FALSE
 
+    ## Clean non-latin characters
+    latin_idx <- is_latin_script_lang(failed_tl_dt[["lang"]])
+
+    failed_tl_dt[latin_idx,
+                 text_masked := clean_latin_text(text_masked)
+    ]
 
     # Prepare save_dir
     if(!is.null(save_dir)){

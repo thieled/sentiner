@@ -357,4 +357,41 @@ clean_text <- function(x,
 
 
 
+#' @title Check Whether a Language Uses Latin Script
+#'
+#' @param lang Character vector of ISO 639-1 language codes.
+#'
+#' @return Logical vector.
+#' @export
+is_latin_script_lang <- function(lang) {
+  latin_langs <- c(
+    "af","sq","bs","ca","cs","da","de","en","es","et","fi","fr",
+    "ga","hr","hu","id","is","it","lt","lv","mt","nl","no","pl",
+    "pt","ro","sk","sl","sv","sw","tr","vi"
+  )
+
+  lang <- tolower(substr(lang, 1L, 2L))
+  lang %in% latin_langs
+}
+
+#' @title Remove Non-Latin Characters from Text
+#'
+#' @param x Character vector.
+#'
+#' @return Character vector.
+#' @export
+clean_latin_text <- function(x) {
+  stringi::stri_trim_both(
+    stringi::stri_replace_all_regex(
+      stringi::stri_replace_all_regex(
+        x,
+        "[^\\p{Latin}\\p{M}\\p{N}\\p{P}\\p{Zs}]",
+        ""
+      ),
+      "\\s+",
+      " "
+    )
+  )
+}
+
 

@@ -57,7 +57,8 @@ utils::globalVariables(c(
   "sentiment",
   "sentiment_confidence",
   "sentiment_datetime",
-  "sentiment_model"
+  "sentiment_model",
+  "pct_diff_ph"
 
 ))
 
