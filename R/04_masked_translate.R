@@ -79,6 +79,7 @@ masked_ent_translate <- function(data,
                                  deterministic = TRUE,
                                  prob_threshold = 0.25,
                                  verbose = TRUE,
+                                 save_dir = NULL,
                                  ...){
 
   vmessage <- function(...) if (verbose) message(...)
@@ -117,6 +118,21 @@ masked_ent_translate <- function(data,
             c(args_init_no_force, list(conda_env_name = conda_env_name, force = FALSE)))
   }
 
+  # Try counter
+  retry_count <- 1L
+
+  # Prepare save_dir
+  if(!is.null(save_dir)){
+
+    save_dir_try <- base::file.path(save_dir, paste0("try_", retry_count - 1))
+
+    if (!base::dir.exists(save_dir_try)) {
+      base::dir.create(save_dir_try, recursive = TRUE, showWarnings = FALSE)
+    }
+
+  }
+
+
   # Step 2: Data preprocessing
   masked_data <- mask_target(data,
                              text_col = text_col,
@@ -136,7 +152,8 @@ masked_ent_translate <- function(data,
                                                  seed = seed,
                                                  beam_size = beam_size,
                                                  deterministic = deterministic,
-                                                 prob_threshold = prob_threshold
+                                                 prob_threshold = prob_threshold,
+                                                 save_dir = save_dir_try
   ),
   args_tl))
 
@@ -181,17 +198,26 @@ masked_ent_translate <- function(data,
     pattern = placeholder
   )][,
      n_diff_ph := n_og_ph - n_tl_ph
+  ][,
+    pct_diff_ph := abs(n_diff_ph) / n_og_ph
   ]
 
   # Step 5: Retries for failures to preserve placeholder
 
-  # Split data in successfully preserved and failure
-  success_tl_dt  <- masked_data_tl[n_diff_ph == 0]
-  failed_tl_dt  <- masked_data_tl[n_diff_ph != 0 | is.na(n_diff_ph)]
-
-  retry_count <- 1L
+  # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count
+  success_tl_dt  <- masked_data_tl[pct_diff_ph < 0.1]
+  failed_tl_dt  <- masked_data_tl[pct_diff_ph >= 0.1 | is.na(pct_diff_ph)]
 
   n_retry <- nrow(failed_tl_dt)
+
+  ### Save interim results
+  if(!is.null(save_dir)){
+
+    saveRDS(success_tl_dt, file = file.path(save_dir_try, paste0(paste0("try_", retry_count - 1, "_success.rds"))))
+    saveRDS(failed_tl_dt, file = file.path(save_dir_try, paste0(paste0("try_", retry_count - 1, "_fail.rds"))))
+
+  }
+
 
   # Retry counter
   while(nrow(failed_tl_dt) >= 1 && retry_count <= n_retries){
@@ -208,14 +234,16 @@ masked_ent_translate <- function(data,
 
     if(retry_count > 2) deterministic = FALSE
 
-    # Isolate save_dir per retry attempt (if provided)
-    args_tl_run <- args_tl
-    if (n_retries > 1L && "save_dir" %in% names(args_tl_run) && !is.null(args_tl_run$save_dir)) {
-      save_dir_try <- base::file.path(args_tl_run$save_dir, paste0("try_", retry_count))
+
+    # Prepare save_dir
+    if(!is.null(save_dir)){
+
+      save_dir_try <- base::file.path(save_dir, paste0("try_", retry_count))
+
       if (!base::dir.exists(save_dir_try)) {
         base::dir.create(save_dir_try, recursive = TRUE, showWarnings = FALSE)
       }
-      args_tl_run$save_dir <- save_dir_try
+
     }
 
     # Call translation; (do.call to pass on dot arguments)
@@ -232,9 +260,10 @@ masked_ent_translate <- function(data,
           seed = seed,
           beam_size = beam_size,
           deterministic = deterministic,
-          prob_threshold = prob_threshold
+          prob_threshold = prob_threshold,
+          save_dir = save_dir_try
         ),
-        args_tl_run
+        args_tl
       )
     )
 
@@ -256,11 +285,13 @@ masked_ent_translate <- function(data,
       pattern = placeholder
     )][,
        n_diff_ph := n_og_ph - n_tl_ph
+    ][,
+      pct_diff_ph := abs(n_diff_ph) / n_og_ph
     ]
 
-    # Split data in successfully preserved and failure
-    retry_success_tl_dt  <- retry_masked_data_tl[n_diff_ph == 0]
-    failed_tl_dt  <- retry_masked_data_tl[n_diff_ph != 0 | is.na(n_diff_ph)]
+    # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count
+    retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < 0.1]
+    failed_tl_dt  <- retry_masked_data_tl[pct_diff_ph >= 0.1 | is.na(pct_diff_ph)]
 
     # Store retry info for successful ones
     retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",
@@ -268,6 +299,12 @@ masked_ent_translate <- function(data,
 
     # Merge successful retries to success_dt
     success_tl_dt <- data.table::rbindlist(list(success_tl_dt, retry_success_tl_dt), use.names = T, fill = T)
+
+    # Save interim result
+    if(!is.null(save_dir)){
+      saveRDS(success_tl_dt, file = file.path(save_dir_try, paste0(paste0("try_", retry_count, "_success.rds"))))
+      saveRDS(failed_tl_dt, file = file.path(save_dir_try, paste0(paste0("try_", retry_count, "_fail.rds"))))
+    }
 
     # Update count
     retry_count <- retry_count + 1L
