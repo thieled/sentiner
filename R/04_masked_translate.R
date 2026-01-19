@@ -367,63 +367,38 @@ masked_ent_translate <- function(data,
 
 
 
-
 #' @title Mask Target Entities in Text
 #'
 #' @description
-#' Replaces target entities in a text column with a standardized placeholder,
-#' ensuring they can be preserved during downstream translation or processing.
-#' The function checks for required columns, issues a warning if texts contain
-#' more than three sentences, and outputs both original and masked text.
+#' Replaces target entities in a text column with a standardized placeholder.
+#' If greedy_replacement is FALSE (default), only replaces when the target is a
+#' standalone token (not embedded in a larger word).
 #'
 #' @param data A data.frame or data.table containing the texts and target entities.
-#' @param text_col Character, name of the text column. Default = `"text_clean"`.
+#' @param text_col Character, name of the text column. Default = "text_clean".
 #' @param entity_col Character, name of the column containing the entity names
-#' to be masked. Default = `"entity_name"`.
-#' @param id_col Character, name of the identifier column for each entity.
-#' Default = `"id"`.
+#'   to be masked. Default = "entity_name".
+#' @param id_col Character, name of the identifier column for each entity. Default = "id".
 #' @param placeholder Character, placeholder string to replace entities in the text.
-#' Default = `"[:XXNEXX:]"`.
-#' @param verbose Logical, whether to print warnings and alerts. Default = `TRUE`.
+#'   Default = "[:XXNEXX:]".
+#' @param greedy_replacement Logical. If FALSE, replace only token-like occurrences
+#'   (not part of a larger word). If TRUE, replace all occurrences as fixed substrings.
+#'   Default = FALSE.
+#' @param verbose Logical, whether to print warnings and alerts. Default = TRUE.
 #'
-#' @details
-#' The function ensures the required columns \code{text}, \code{target}, and
-#' \code{id} are present. If these columns are missing, it attempts to rename
-#' user-specified alternatives via \code{text_col}, \code{entity_col}, and
-#' \code{id_col}.
-#'
-#' It also checks whether any text contains more than three sentences using
-#' \code{tokenizers::count_sentences()}. If so, a warning is displayed suggesting
-#' that the text should be preprocessed with \code{sentiner::clean_text()}.
-#'
-#' The entity masking replaces all occurrences of the target entity with the
-#' specified placeholder string, producing a new column \code{text_masked}.
-#'
-#' @return A data.table with at least the following columns:
-#' \itemize{
-#'   \item \code{text}: Original text.
-#'   \item \code{target}: Entity name to be masked.
-#'   \item \code{id}: Identifier for the entity.
-#'   \item \code{text_masked}: Text with the entity replaced by the placeholder.
-#'   \item \code{n_sen}: Number of sentences in the original text.
-#' }
-#'
-#' @seealso \code{\link{clean_text}}, \code{\link{masked_ent_translate}}
-#'
-#' @import data.table
+#' @return A data.table including text_masked and n_sen.
 #' @export
 mask_target <- function(data,
                         text_col = "text_clean",
-                        entity_col= "entity_name",
+                        entity_col = "entity_name",
                         id_col = "id",
                         placeholder = "[:XXNEXX:]",
-                        verbose = T){
+                        greedy_replacement = FALSE,
+                        verbose = TRUE) {
 
-  # Create a copy of data
   data <- data.table::as.data.table(data)
   data <- data.table::copy(data)
 
-  # Ensure required columns are present or rename using alternative names
   required_columns <- c("text", "target", "id")
   alternative_names <- list(id = id_col, target = entity_col, text = text_col)
 
@@ -433,28 +408,75 @@ mask_target <- function(data,
     alt_name <- alternative_names[[col]]
 
     assertthat::assert_that(!is.null(alt_name),
-                            msg = paste0("'", col, "' not specified and not found in 'data'."))
+                            msg = paste0("'", col, "' not specified and not found in 'data'.")
+    )
     assertthat::assert_that(alt_name %in% names(data),
-                            msg = paste0("Alternative name for '", col, "' provided but not found in 'data'."))
+                            msg = paste0("Alternative name for '", col, "' provided but not found in 'data'.")
+    )
 
     data.table::setnames(data, old = alt_name, new = col)
   }
 
-  # Warn user if text is not sufficiently clean:
   data[, n_sen := tokenizers::count_sentences(text)]
-  if(max(data$n_sen, na.rm = T) > 3) {
-    if(verbose) cli::cli_alert("Alert: Text contains observations of more than 3 sentences.
-                                        Consider preprocessing with sentiner::clean_text().")
+  if (max(data$n_sen, na.rm = TRUE) > 3L && isTRUE(verbose)) {
+    cli::cli_alert(
+      "Alert: Text contains observations of more than 3 sentences. Consider preprocessing with sentiner::clean_text()."
+    )
   }
 
-  # Masking: Replace the target by placeholder:
-  data[, text_masked := stringi::stri_replace_all_fixed(
-    text,
-    pattern = target,
-    replacement = placeholder,
-    vectorize_all = TRUE
-  )]
+  if (isTRUE(greedy_replacement)) {
+    data[, text_masked := stringi::stri_replace_all_fixed(
+      text,
+      pattern = target,
+      replacement = placeholder,
+      vectorize_all = TRUE,
+      case_insensitive = FALSE
+    )]
+  } else {
+    # Token-like replacement:
+    # target must NOT be part of a larger word (letters/digits/underscore).
+    # Uses Unicode-aware boundaries.
+    data[, text_masked := {
+      txt <- text
+      pat <- target
 
-  return(data)
+      ok <- !(is.na(txt) | txt == "" | is.na(pat) | pat == "")
+      out <- txt
 
+      if (any(ok)) {
+        txt_ok <- txt[ok]
+        pat_ok <- pat[ok]
+
+        pat_esc <- stringi::stri_replace_all_regex(
+          pat_ok,
+          "([\\\\.^$|?*+()\\[\\]{}])",
+          "\\\\$1"
+        )
+
+        # Word chars: letters/digits/underscore. Boundaries: start/end or non-word.
+        bw <- "[^\\p{L}\\p{N}_]"
+
+        rx <- paste0(
+          "(?:(?<=^)|(?<=", bw, "))",
+          pat_esc,
+          "(?:(?=$)|(?=", bw, "))"
+        )
+
+        out_ok <- stringi::stri_replace_all_regex(
+          txt_ok,
+          pattern = rx,
+          replacement = placeholder,
+          vectorize_all = TRUE,
+          case_insensitive = FALSE
+        )
+
+        out[ok] <- out_ok
+      }
+
+      out
+    }]
+  }
+
+  data
 }
+
