@@ -210,9 +210,10 @@ masked_ent_translate <- function(data,
 
   # Step 5: Retries for failures to preserve placeholder
 
-  # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count
-  success_tl_dt  <- masked_data_tl[pct_diff_ph < restore_threshold]
-  failed_tl_dt  <- masked_data_tl[pct_diff_ph >= restore_threshold | is.na(pct_diff_ph)]
+  # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count;
+  # also include obs where more (but less than double) placeholders were preserved
+  success_tl_dt  <- masked_data_tl[pct_diff_ph < restore_threshold | (n_diff_ph < 0 &  n_tl_ph / n_og_ph <= 2)]
+  failed_tl_dt  <- masked_data_tl[!id %in% success_tl_dt$id]
 
   n_retry <- nrow(failed_tl_dt)
 
@@ -303,8 +304,11 @@ masked_ent_translate <- function(data,
     ]
 
     # Split data in successfully preserved and failure - Revised: use user-defined threshold (in pct) instead of raw count
-    retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < restore_threshold]
-    failed_tl_dt  <- retry_masked_data_tl[pct_diff_ph >= restore_threshold | is.na(pct_diff_ph)]
+    retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < restore_threshold | (n_diff_ph < 0 &  n_tl_ph / n_og_ph <= 2)]
+    failed_tl_dt  <- retry_masked_data_tl[!id %in% retry_success_tl_dt$id]
+
+    # retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < restore_threshold]
+    # failed_tl_dt  <- retry_masked_data_tl[pct_diff_ph >= restore_threshold | is.na(pct_diff_ph)]
 
     # Store retry info for successful ones
     retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",
