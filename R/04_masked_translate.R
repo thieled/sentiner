@@ -483,3 +483,166 @@ mask_target <- function(data,
   data
 }
 
+
+
+#' Reconstruct Exact Named-Entity Wording From Source Text
+#'
+#' Attempts to restore the exact surface form (original casing/punctuation/handle-ish affixes)
+#' of a named entity from a source text. This is useful when the entity string in
+#' \code{entity_col} has no exact match in \code{text_col} due to casing differences,
+#' missing punctuation, tokenization artifacts, or short prefixes/suffixes (e.g., \code{@},
+#' underscores, or brief alphanumeric attachments).
+#'
+#' The function searches each text for regex matches of the entity tokens with
+#' Unicode-aware boundaries. For multi-token entities, it allows flexible separators
+#' (whitespace and punctuation). Optionally, it also allows a short alphanumeric/handle-like
+#' prefix and/or suffix around the entity (controlled by \code{max_prefix} and \code{max_suffix}).
+#'
+#' If multiple matches are found, the most frequent match is selected; ties are broken by
+#' choosing the earliest occurrence in the text.
+#'
+#' @param dt A \code{data.table} containing the source text and entity columns.
+#' @param text_col Character scalar. Name of the column containing the source text.
+#' @param entity_col Character scalar. Name of the column containing the entity string to reconstruct.
+#' @param out_col Character scalar. Name of the output column to create with the reconstructed entity.
+#' @param case_insensitive Logical scalar. If \code{TRUE}, matching ignores case.
+#' @param max_prefix Integer scalar >= 0. Maximum number of prefix characters allowed before the
+#'   entity core in extended matching mode.
+#' @param max_suffix Integer scalar >= 0. Maximum number of suffix characters allowed after the
+#'   entity core in extended matching mode.
+#'
+#' @return A copy of \code{dt} with an added column \code{out_col}. If no match is found or
+#'   inputs are empty/NA, \code{out_col} is \code{NA_character_}.
+#'
+#' @export
+reconstruct_target <- function(dt,
+                               text_col = "text",
+                               entity_col = "target",
+                               out_col = "exact_target",
+                               case_insensitive = TRUE,
+                               max_prefix = 3L,
+                               max_suffix = 3L) {
+  stopifnot(data.table::is.data.table(dt))
+  stopifnot(is.character(text_col), length(text_col) == 1L)
+  stopifnot(is.character(entity_col), length(entity_col) == 1L)
+  stopifnot(is.character(out_col), length(out_col) == 1L)
+  stopifnot(is.logical(case_insensitive), length(case_insensitive) == 1L)
+  stopifnot(is.numeric(max_prefix), length(max_prefix) == 1L, max_prefix >= 0L)
+  stopifnot(is.numeric(max_suffix), length(max_suffix) == 1L, max_suffix >= 0L)
+
+  if (!requireNamespace("data.table", quietly = TRUE)) {
+    stop("Package 'data.table' is required.")
+  }
+  if (!requireNamespace("stringi", quietly = TRUE)) {
+    stop("Package 'stringi' is required.")
+  }
+
+  if (!text_col %chin% names(dt)) stop("Column '", text_col, "' not found in dt.")
+  if (!entity_col %chin% names(dt)) stop("Column '", entity_col, "' not found in dt.")
+
+  max_prefix <- as.integer(max_prefix)
+  max_suffix <- as.integer(max_suffix)
+
+  dt <- data.table::copy(dt)
+
+  build_rx <- function(entity, max_prefix, max_suffix) {
+    ent <- stringi::stri_trim_both(entity)
+    toks <- stringi::stri_split_regex(ent, "\\s+", simplify = FALSE)[[1L]]
+    toks <- toks[nzchar(toks)]
+
+    if (!length(toks)) return(NA_character_)
+
+    toks_esc <- stringi::stri_replace_all_regex(
+      toks,
+      "([\\\\.^$|?*+()\\[\\]{}])",
+      "\\\\$1"
+    )
+
+    bw <- "[^\\p{L}\\p{N}_]"
+    sep <- "(?:[\\s\\p{P}\\p{Cf}]+)"
+    core <- paste(toks_esc, collapse = sep)
+
+    strict <- paste0(
+      "(?:(?<=^)|(?<=", bw, "))",
+      core,
+      "(?:(?=$)|(?=", bw, "))"
+    )
+
+    pref_cls <- "[\\p{L}\\p{N}_@]"
+    suf_cls  <- "[\\p{L}\\p{N}_]"
+
+    pref_0 <- if (max_prefix > 0L) paste0("(?:", pref_cls, "{0,", max_prefix, "})") else ""
+    pref_1 <- if (max_prefix > 0L) paste0("(?:", pref_cls, "{1,", max_prefix, "})") else NULL
+
+    suf_0 <- if (max_suffix > 0L) paste0("(?:", suf_cls, "{0,", max_suffix, "})") else ""
+    suf_1 <- if (max_suffix > 0L) paste0("(?:", suf_cls, "{1,", max_suffix, "})") else NULL
+
+    end_boundary <- "(?:(?=[\\s\\p{P}\\p{Cf}])|(?=$))"
+
+    ext_alts <- character(0)
+
+    if (!is.null(pref_1)) {
+      ext_alts <- c(ext_alts, paste0(
+        "(?:(?<=^)|(?<=", bw, "))",
+        pref_1, core, suf_0,
+        end_boundary
+      ))
+    }
+    if (!is.null(suf_1)) {
+      ext_alts <- c(ext_alts, paste0(
+        "(?:(?<=^)|(?<=", bw, "))",
+        pref_0, core, suf_1,
+        end_boundary
+      ))
+    }
+
+    if (length(ext_alts)) {
+      paste0("(?:", paste(c(strict, ext_alts), collapse = "|"), ")")
+    } else {
+      strict
+    }
+  }
+
+  dt[, (out_col) := {
+    ent <- .SD[[1L]][1L]
+    txt <- .SD[[2L]][1L]
+
+    if (is.na(ent) || !nzchar(ent) || is.na(txt) || !nzchar(txt)) {
+      NA_character_
+    } else {
+      rx <- build_rx(ent, max_prefix = max_prefix, max_suffix = max_suffix)
+      if (is.na(rx) || !nzchar(rx)) {
+        NA_character_
+      } else {
+        m <- stringi::stri_extract_all_regex(
+          txt,
+          rx,
+          case_insensitive = case_insensitive,
+          omit_no_match = TRUE
+        )[[1L]]
+
+        if (!length(m)) {
+          NA_character_
+        } else {
+          tab <- sort(table(m), decreasing = TRUE)
+          top <- names(tab)[tab == tab[1L]]
+
+          if (length(top) == 1L) {
+            top
+          } else {
+            starts <- vapply(
+              top,
+              function(x) stringi::stri_locate_first_fixed(txt, x)[1L],
+              integer(1L)
+            )
+            top[which.min(starts)]
+          }
+        }
+      }
+    }
+  }, by = c(entity_col, text_col), .SDcols = c(entity_col, text_col)]
+
+  dt
+}
+
+
