@@ -34,6 +34,7 @@
 #' @param restore_threshold Numeric, threshold (share of placeholders successfully preserved in translation)
 #'  below which a masked translation is considered unsuccessful; Default = `0.10`.
 #' @param verbose Logical, whether to print progress messages. Default = `TRUE`.
+#' @param save_dir Character. (Optional) Directory where interim translation results should be saved.
 #' @param ... Additional arguments passed to either
 #' \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
 #' arguments are ignored with a warning.
@@ -383,7 +384,7 @@ masked_ent_translate <- function(data,
 #'   to be masked. Default = "entity_name".
 #' @param id_col Character, name of the identifier column for each entity. Default = "id".
 #' @param placeholder Character, placeholder string to replace entities in the text.
-#'   Default = "[:XXNEXX:]".
+#'   Default = \code{"[:XXNEXX:]"}.
 #' @param greedy_replacement Logical. If FALSE, replace only token-like occurrences
 #'   (not part of a larger word). If TRUE, replace all occurrences as fixed substrings.
 #'   Default = FALSE.

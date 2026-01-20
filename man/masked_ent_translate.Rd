@@ -17,6 +17,7 @@ masked_ent_translate(
   beam_size = 1L,
   deterministic = TRUE,
   prob_threshold = 0.25,
+  restore_threshold = 0.1,
   verbose = TRUE,
   save_dir = NULL,
   ...
@@ -56,7 +57,12 @@ settings. Default = \code{TRUE}.}
 \item{prob_threshold}{Numeric, threshold below which the detected language is replaced
 by \code{targ_lang} (or by the user-provided \code{lang_guess}). Default = 0.25.}
 
+\item{restore_threshold}{Numeric, threshold (share of placeholders successfully preserved in translation)
+below which a masked translation is considered unsuccessful; Default = \code{0.10}.}
+
 \item{verbose}{Logical, whether to print progress messages. Default = \code{TRUE}.}
+
+\item{save_dir}{Character. (Optional) Directory where interim translation results should be saved.}
 
 \item{...}{Additional arguments passed to either
 \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown

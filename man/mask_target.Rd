@@ -10,54 +10,34 @@ mask_target(
   entity_col = "entity_name",
   id_col = "id",
   placeholder = "[:XXNEXX:]",
-  verbose = T
+  greedy_replacement = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
 \item{data}{A data.frame or data.table containing the texts and target entities.}
 
-\item{text_col}{Character, name of the text column. Default = \code{"text_clean"}.}
+\item{text_col}{Character, name of the text column. Default = "text_clean".}
 
 \item{entity_col}{Character, name of the column containing the entity names
-to be masked. Default = \code{"entity_name"}.}
+to be masked. Default = "entity_name".}
 
-\item{id_col}{Character, name of the identifier column for each entity.
-Default = \code{"id"}.}
+\item{id_col}{Character, name of the identifier column for each entity. Default = "id".}
 
 \item{placeholder}{Character, placeholder string to replace entities in the text.
 Default = \code{"[:XXNEXX:]"}.}
 
-\item{verbose}{Logical, whether to print warnings and alerts. Default = \code{TRUE}.}
+\item{greedy_replacement}{Logical. If FALSE, replace only token-like occurrences
+(not part of a larger word). If TRUE, replace all occurrences as fixed substrings.
+Default = FALSE.}
+
+\item{verbose}{Logical, whether to print warnings and alerts. Default = TRUE.}
 }
 \value{
-A data.table with at least the following columns:
-\itemize{
-\item \code{text}: Original text.
-\item \code{target}: Entity name to be masked.
-\item \code{id}: Identifier for the entity.
-\item \code{text_masked}: Text with the entity replaced by the placeholder.
-\item \code{n_sen}: Number of sentences in the original text.
-}
+A data.table including text_masked and n_sen.
 }
 \description{
-Replaces target entities in a text column with a standardized placeholder,
-ensuring they can be preserved during downstream translation or processing.
-The function checks for required columns, issues a warning if texts contain
-more than three sentences, and outputs both original and masked text.
-}
-\details{
-The function ensures the required columns \code{text}, \code{target}, and
-\code{id} are present. If these columns are missing, it attempts to rename
-user-specified alternatives via \code{text_col}, \code{entity_col}, and
-\code{id_col}.
-
-It also checks whether any text contains more than three sentences using
-\code{tokenizers::count_sentences()}. If so, a warning is displayed suggesting
-that the text should be preprocessed with \code{sentiner::clean_text()}.
-
-The entity masking replaces all occurrences of the target entity with the
-specified placeholder string, producing a new column \code{text_masked}.
-}
-\seealso{
-\code{\link{clean_text}}, \code{\link{masked_ent_translate}}
+Replaces target entities in a text column with a standardized placeholder.
+If greedy_replacement is FALSE (default), only replaces when the target is a
+standalone token (not embedded in a larger word).
 }
