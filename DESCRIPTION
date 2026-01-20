@@ -1,9 +1,9 @@
 Package: sentiner
 Title: Targeted Sentiment Analysis with GLiNER and Transformers from R 
-Version: 0.0.1.4
+Version: 0.0.1.5
 Authors@R: 
     person("Daniel", "Thiele", , "daniel.thiele@fu-berlin.de", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: Targeted Sentiment Analysis with GliNER and Transformers from R.
 License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

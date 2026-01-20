@@ -31,6 +31,8 @@
 #' settings. Default = `TRUE`.
 #' @param prob_threshold Numeric, threshold below which the detected language is replaced
 #' by `targ_lang` (or by the user-provided \code{lang_guess}). Default = 0.25.
+#' @param restore_threshold Numeric, threshold (share of placeholders successfully preserved in translation)
+#'  below which a masked translation is considered unsuccessful; Default = `0.10`.
 #' @param verbose Logical, whether to print progress messages. Default = `TRUE`.
 #' @param ... Additional arguments passed to either
 #' \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
@@ -78,6 +80,7 @@ masked_ent_translate <- function(data,
                                  beam_size = 1L,
                                  deterministic = TRUE,
                                  prob_threshold = 0.25,
+                                 restore_threshold = 0.10,
                                  verbose = TRUE,
                                  save_dir = NULL,
                                  ...){
@@ -205,8 +208,8 @@ masked_ent_translate <- function(data,
   # Step 5: Retries for failures to preserve placeholder
 
   # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count
-  success_tl_dt  <- masked_data_tl[pct_diff_ph < 0.1]
-  failed_tl_dt  <- masked_data_tl[pct_diff_ph >= 0.1 | is.na(pct_diff_ph)]
+  success_tl_dt  <- masked_data_tl[pct_diff_ph < restore_threshold]
+  failed_tl_dt  <- masked_data_tl[pct_diff_ph >= restore_threshold | is.na(pct_diff_ph)]
 
   n_retry <- nrow(failed_tl_dt)
 
@@ -294,9 +297,9 @@ masked_ent_translate <- function(data,
       pct_diff_ph := abs(n_diff_ph) / n_og_ph
     ]
 
-    # Split data in successfully preserved and failure - Revised: use 10% cutoff instead of raw count
-    retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < 0.1]
-    failed_tl_dt  <- retry_masked_data_tl[pct_diff_ph >= 0.1 | is.na(pct_diff_ph)]
+    # Split data in successfully preserved and failure - Revised: use user-defined threshold (in pct) instead of raw count
+    retry_success_tl_dt  <- retry_masked_data_tl[pct_diff_ph < restore_threshold]
+    failed_tl_dt  <- retry_masked_data_tl[pct_diff_ph >= restore_threshold | is.na(pct_diff_ph)]
 
     # Store retry info for successful ones
     retry_success_tl_dt[, tl_error := paste0("Retries to preserve placeholder: ",
