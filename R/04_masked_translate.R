@@ -134,6 +134,8 @@ masked_ent_translate <- function(data,
       base::dir.create(save_dir_try, recursive = TRUE, showWarnings = FALSE)
     }
 
+  }else{
+    save_dir_try = NULL
   }
 
 
@@ -253,6 +255,8 @@ masked_ent_translate <- function(data,
         base::dir.create(save_dir_try, recursive = TRUE, showWarnings = FALSE)
       }
 
+    }else{
+      save_dir_try = NULL
     }
 
     # Call translation; (do.call to pass on dot arguments)
