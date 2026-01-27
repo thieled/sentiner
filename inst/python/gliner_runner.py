@@ -67,11 +67,13 @@ print(f"[gliner_runner] Model loaded. Device: {next(model.parameters()).device}"
 # ----------------------------
 # Entity extraction
 # ----------------------------
-def extract_entities(doc_ids, texts, labels, batch_size=8, threshold=0.3):
+def extract_entities(doc_ids, texts, labels, batch_size=8, threshold=0.1):
     """
     Extract entities using GLiNER's inference method.
     The model.inference() handles batching internally and uses the device
     the model was loaded to (cuda if available, cpu otherwise).
+    
+    Default threshold is 0.1 to capture more entities (lower = more sensitive).
     """
     # inference() processes all texts with internal batching
     batch_ents = model.inference(
@@ -113,7 +115,10 @@ labels = list(doc["labels"])
 raw_bs = doc.get("batch_size", 8)
 batch_size = int(raw_bs[0] if isinstance(raw_bs, list) else raw_bs)
 
-entities = extract_entities(doc_ids, texts, labels, batch_size=batch_size)
+raw_th = doc.get("threshold", 0.1)
+threshold = float(raw_th[0] if isinstance(raw_th, list) else raw_th)
+
+entities = extract_entities(doc_ids, texts, labels, batch_size=batch_size, threshold=threshold)
 
 with open(output_file, "w", encoding="utf-8") as f:
     json.dump(entities, f, ensure_ascii=False, indent=2)

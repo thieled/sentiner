@@ -21,6 +21,9 @@
 #' @param labels character vector of candidate labels
 #' @param batch_size integer, batch size for Python GLiNER (default 16)
 #' @param chunk_factor integer, how many batches per Python call (default 100)
+#' @param threshold numeric, confidence threshold for entity extraction (default 0.1).
+#'   Lower values (e.g., 0.1) are more sensitive and extract more entities.
+#'   Higher values (e.g., 0.3-0.5) are more conservative.
 #' @param model character, model ID (default: "urchade/gliner_multi-v2.1")
 #' @param env character, conda environment name (default: "r-sentiner")
 #' @param script optional path to the Python script; by default uses
@@ -55,6 +58,7 @@
 gliner_extract <- function(df, labels,
                            batch_size = 16L,
                            chunk_factor = 100L,
+                           threshold = 0.1,
                            model = "urchade/gliner_multi-v2.1",
                            env = "r-sentiner",
                            script = NULL,
@@ -99,7 +103,8 @@ gliner_extract <- function(df, labels,
       doc_ids   = as.character(chunk_df$doc_id),
       texts     = vapply(chunk_df$text, as.character, character(1L)),
       labels    = as.character(labels),
-      batch_size = batch_size
+      batch_size = batch_size,
+      threshold = threshold
     )
 
     input_file  <- tempfile(sprintf("gliner_in_chunk%0*d_", nchar(n_chunks), i), fileext = ".json")
