@@ -262,7 +262,7 @@ install_conda_env <- function(conda_env_name = "r-sentiner",
 #' using a conservative mapping that **never chooses below cu126** and (by default) **prefers cu126**
 #' for broad compatibility. Falls back to CPU wheels if needed.
 #'
-#' @param conda_env_name Character. Name of the conda environment. Default "r-easynmt".
+#' @param conda_env_name Character. Name of the conda environment. Default "r-sentiner".
 #' @param python_version Character. Python version to use when creating the Conda environment.
 #'   Defaults to `"3.11"`. If the environment already exists, the version is not changed.
 #' @param conda_path Character. Path to Conda installation. If NULL, autodetect.
@@ -270,7 +270,7 @@ install_conda_env <- function(conda_env_name = "r-sentiner",
 #'
 #' @return Invisibly returns `NULL`.
 #' @export
-install_torch <- function(conda_env_name = "r-easynmt",
+install_torch <- function(conda_env_name = "r-sentiner",
                           python_version = "3.11",
                           conda_path = NULL,
                           verbose = TRUE) {
