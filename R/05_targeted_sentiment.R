@@ -117,8 +117,8 @@ get_targeted_sentiment <- function(data,
     contradiction_index = as.integer(contradiction_index),
     fp16 = fp16)
   
-  # Convert pandas to R
-  sen_res <- data.table::as.data.table(reticulate::py_to_r(sen_res))
+  # Convert dict to data.table
+  sen_res <- data.table::as.data.table(sen_res)
   
   # Message
   total_elapsed <- round(difftime(Sys.time(), start_time, units = "secs"), 1)

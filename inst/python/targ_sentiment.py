@@ -210,4 +210,4 @@ def classify_sentiments_nli(
     finally:
         pbar.close()
 
-    return pd.DataFrame(results)
+    return pd.DataFrame(results).to_dict('list')
