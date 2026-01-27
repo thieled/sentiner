@@ -108,15 +108,17 @@ gliner_extract <- function(df, labels,
     yyjsonr::write_json_file(payload, input_file)
     Sys.setenv(GLINER_SEED = as.character(seed))
 
-    invisible(
-      processx::run(
-        "conda",
-        c("run", "-n", env, "python", script,
-          input_file, output_file, model),
-        error_on_status = TRUE,
-        echo = FALSE
-      )
+    result <- system2(
+      "conda",
+      c("run", "-n", env, "python", script,
+        input_file, output_file, model),
+      stdout = TRUE,
+      stderr = TRUE
     )
+    
+    if (!is.null(attr(result, "status")) && attr(result, "status") != 0) {
+      stop("GLiNER extraction failed:\n", paste(result, collapse = "\n"))
+    }
 
     res <- yyjsonr::read_json_file(output_file) |>
       data.table::as.data.table()

@@ -63,18 +63,18 @@ model = GLiNER.from_pretrained(model_name).to(device)
 # ----------------------------
 # Entity extraction
 # ----------------------------
-def extract_entities(doc_ids, texts, labels, batch_size=8,
-                     threshold=0.3, num_gen_sequences=1):
+def extract_entities(doc_ids, texts, labels, batch_size=8, threshold=0.3):
     results = []
     n = len(texts)
     for i in range(0, n, batch_size):
         batch_ids = doc_ids[i:i+batch_size]
         batch_texts = texts[i:i+batch_size]
 
-        batch_ents = model.run(batch_texts, labels,
-                               threshold=threshold,
-                               num_gen_sequences=num_gen_sequences,
-                               device=device)
+        batch_ents = model.predict_entities(
+            batch_texts, 
+            labels,
+            threshold=threshold
+        )
 
         for doc_id, ents in zip(batch_ids, batch_ents):
             for idx, ent in enumerate(ents, start=1):
