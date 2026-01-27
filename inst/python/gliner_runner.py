@@ -64,32 +64,36 @@ model = GLiNER.from_pretrained(model_name).to(device)
 # Entity extraction
 # ----------------------------
 def extract_entities(doc_ids, texts, labels, batch_size=8, threshold=0.3):
+    """
+    Extract entities using GLiNER's inference method.
+    The model.inference() handles batching internally and uses the device
+    the model was loaded to (cuda if available, cpu otherwise).
+    """
+    # inference() processes all texts with internal batching
+    batch_ents = model.inference(
+        texts,
+        labels,
+        flat_ner=True,
+        threshold=threshold,
+        multi_label=False,
+        batch_size=batch_size
+    )
+    
     results = []
-    n = len(texts)
-    for i in range(0, n, batch_size):
-        batch_ids = doc_ids[i:i+batch_size]
-        batch_texts = texts[i:i+batch_size]
-
-        batch_ents = model.predict_entities(
-            batch_texts, 
-            labels,
-            threshold=threshold
-        )
-
-        for doc_id, ents in zip(batch_ids, batch_ents):
-            for idx, ent in enumerate(ents, start=1):
-                results.append({
-                    "doc_id": doc_id,
-                    "entity_count": idx,
-                    "entity_name": ent["text"],
-                    "label": ent.get("label"),
-                    "score": ent.get("score"),
-                    "start": ent["start"] + 1,  # R-style indexing
-                    "end": ent["end"] + 1       # inclusive
-                })
-
-        print(f"[gliner_runner] Processed {min(i+batch_size, n)}/{n} docs",
-              flush=True)
+    for doc_id, ents in zip(doc_ids, batch_ents):
+        for idx, ent in enumerate(ents, start=1):
+            results.append({
+                "doc_id": doc_id,
+                "entity_count": idx,
+                "entity_name": ent["text"],
+                "label": ent.get("label"),
+                "score": ent.get("score"),
+                "start": ent["start"] + 1,  # R-style indexing
+                "end": ent["end"] + 1       # inclusive
+            })
+    
+    print(f"[gliner_runner] Processed {len(texts)} docs, extracted {len(results)} entities",
+          flush=True)
     return results
 
 # ----------------------------
