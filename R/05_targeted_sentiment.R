@@ -117,6 +117,13 @@ get_targeted_sentiment <- function(data,
     contradiction_index = as.integer(contradiction_index),
     fp16 = fp16)
   
+  # Convert pandas DataFrame to R data.frame if needed
+  if (inherits(sen_res, "pandas.core.frame.DataFrame")) {
+    sen_res <- reticulate::py_to_r(sen_res$to_dict('list')) |>
+      lapply(function(x) if (is.list(x)) unlist(x) else x) |>
+      as.data.frame(stringsAsFactors = FALSE)
+  }
+  
   # Message
   total_elapsed <- round(difftime(Sys.time(), start_time, units = "secs"), 1)
   if (verbose) {
