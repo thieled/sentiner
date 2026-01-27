@@ -57,8 +57,12 @@ if len(sys.argv) < 3:
 input_file, output_file = sys.argv[1], sys.argv[2]
 model_name = sys.argv[3] if len(sys.argv) > 3 else "urchade/gliner_multi-v2.1"
 
-print(f"[gliner_runner] Loading model: {model_name}", flush=True)
-model = GLiNER.from_pretrained(model_name).to(device)
+print(f"[gliner_runner] Loading model: {model_name} on {device}...", flush=True)
+model = GLiNER.from_pretrained(model_name)
+model = model.to(device)
+model.eval()
+
+print(f"[gliner_runner] Model loaded. Device: {next(model.parameters()).device}", flush=True)
 
 # ----------------------------
 # Entity extraction
