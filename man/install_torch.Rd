@@ -2,21 +2,20 @@
 % Please edit documentation in R/00_installs.R
 \name{install_torch}
 \alias{install_torch}
-\title{Install PyTorch and onnxruntime in a Conda Environment}
+\title{Install PyTorch in a Conda Environment}
 \usage{
 install_torch(
-  conda_env_name = "r-sentiner",
+  conda_env_name = "r-easynmt",
   python_version = "3.11",
   conda_path = NULL,
   verbose = TRUE
 )
 }
 \arguments{
-\item{conda_env_name}{Character. Name of the conda environment. Default "r-sentiner".}
+\item{conda_env_name}{Character. Name of the conda environment. Default "r-easynmt".}
 
 \item{python_version}{Character. Python version to use when creating the Conda environment.
-Defaults to \code{"3.11"}. If the environment already exists, the version is not changed
-unless \code{force = TRUE}.}
+Defaults to \code{"3.11"}. If the environment already exists, the version is not changed.}
 
 \item{conda_path}{Character. Path to Conda installation. If NULL, autodetect.}
 
@@ -27,6 +26,8 @@ Invisibly returns \code{NULL}.
 }
 \description{
 Installs PyTorch and related libraries (\code{torch}, \code{torchvision}, \code{torchaudio})
-in a Conda environment created with \code{\link[=install_conda_env]{install_conda_env()}}. The function detects CUDA/GPU
-availability and installs the appropriate build. If the GPU build URL is invalid, it falls back to CPU.
+in a Conda environment created with \code{\link[=install_conda_env]{install_conda_env()}}. CUDA availability is detected
+via the NVIDIA driver (\code{nvidia-smi}, not \code{nvcc}). A compatible PyTorch wheel index is selected
+using a conservative mapping that \strong{never chooses below cu126} and (by default) \strong{prefers cu126}
+for broad compatibility. Falls back to CPU wheels if needed.
 }

@@ -132,29 +132,151 @@ install_conda_env <- function(conda_env_name = "r-sentiner",
 }
 
 
-#' @title Install PyTorch and onnxruntime in a Conda Environment
+# install_torch <- function(conda_env_name = "r-sentiner",
+#                           python_version = "3.11",
+#                           conda_path = NULL,
+#                           verbose = TRUE) {
+#
+#   vmessage <- function(...) if (verbose) message(...)
+#
+#   # Make sure the environment exists
+#   install_conda_env(
+#     conda_env_name = conda_env_name,
+#     python_version = python_version,
+#     conda_path = conda_path,
+#     ask = TRUE,
+#     force = FALSE,
+#     verbose = verbose
+#   )
+#
+#   # Detect GPU
+#   gpu_available <- FALSE
+#   if (.Platform$OS.type == "windows") {
+#     gpu_info <- try(system("wmic path win32_VideoController get name", intern = TRUE), silent = TRUE)
+#     gpu_available <- any(grepl("NVIDIA", gpu_info, ignore.case = TRUE))
+#   } else {
+#     gpu_info <- try(system("nvidia-smi", intern = TRUE), silent = TRUE)
+#     gpu_available <- !inherits(gpu_info, "try-error") && length(gpu_info) > 0
+#   }
+#
+#   # Detect CUDA version if GPU present
+#   cuda_version <- NULL
+#   if (gpu_available) {
+#     nvcc_output <- tryCatch(system("nvcc --version", intern = TRUE), error = function(e) NULL)
+#     if (!is.null(nvcc_output)) {
+#       version_line <- nvcc_output[grepl("release", nvcc_output)]
+#       cuda_version <- sub(".*release ([0-9]+\\.[0-9]+).*", "\\1", version_line)
+#     }
+#   }
+#
+#   # Construct install URL
+#   base_url <- "https://download.pytorch.org/whl/"
+#   index_url <- if (is.null(cuda_version)) {
+#     paste0(base_url, "cpu")
+#   } else {
+#     paste0(base_url, "cu", gsub("\\.", "", cuda_version))
+#   }
+#
+#   # Validate URL
+#   validate_url <- function(url) {
+#     if (!requireNamespace("httr", quietly = TRUE)) stop("Package 'httr' is required.")
+#     response <- tryCatch(httr::HEAD(url), error = function(e) NULL)
+#     !is.null(response) && httr::status_code(response) == 200
+#   }
+#
+#   if (!validate_url(index_url)) {
+#     cli::cli_warn("Invalid or unavailable PyTorch URL: {index_url}. Falling back to CPU-only build.")
+#     index_url <- paste0(base_url, "cpu")
+#     cuda_version <- NULL
+#   }
+#
+#   vmessage("Installing PyTorch into conda environment '", conda_env_name, "' ...")
+#   if (is.null(cuda_version)) {
+#     vmessage("No CUDA detected. Installing CPU-only build.")
+#   } else {
+#     vmessage("CUDA ", cuda_version, " detected. Installing GPU build.")
+#   }
+#
+#   # Install via reticulate into conda env
+#   tryCatch({
+#     reticulate::py_install(
+#       packages = c("torch", "torchvision", "torchaudio"),
+#       envname = conda_env_name,
+#       method = "conda",
+#       pip = TRUE,
+#       pip_options = paste("--index-url", index_url)
+#     )
+#     vmessage("Torch installation completed successfully.")
+#   }, error = function(e) {
+#     stop("Torch installation failed: ", e$message)
+#   })
+#
+#   # Verify installation
+#   tryCatch({
+#     torch <- reticulate::import("torch", delay_load = TRUE)
+#     vmessage("Torch successfully installed and imported.")
+#     vmessage("Torch version: ", torch$`__version__`)
+#     vmessage("CUDA available: ", torch$cuda$is_available())
+#     if (!is.null(cuda_version)) {
+#       vmessage("CUDA version (from torch): ", torch$version$cuda)
+#     }
+#   }, error = function(e) {
+#     stop("Verification failed: Torch is not properly installed.")
+#   })
+#
+#   # Install onnxruntime-gpu / onnxruntime via reticulate into conda env
+#   tryCatch({
+#
+#     if(gpu_available){
+#       reticulate::py_install(
+#         packages = c("onnxruntime-gpu"),
+#         envname = conda_env_name,
+#         method = "conda",
+#         pip = TRUE
+#       )
+#       vmessage("Installed onnxruntime-gpu.")
+#       }else{
+#         reticulate::py_install(
+#           packages = c("onnxruntime"),
+#           envname = conda_env_name,
+#           method = "conda",
+#           pip = TRUE)
+#         vmessage("Installed onnxruntime.")
+#       }
+#
+#   }, error = function(e) {
+#     stop("onnxruntime installation failed: ", e$message)
+#   })
+#
+#   invisible(NULL)
+# }
+
+
+
+
+#' @title Install PyTorch in a Conda Environment
 #'
 #' @description Installs PyTorch and related libraries (`torch`, `torchvision`, `torchaudio`)
-#' in a Conda environment created with [install_conda_env()]. The function detects CUDA/GPU
-#' availability and installs the appropriate build. If the GPU build URL is invalid, it falls back to CPU.
+#' in a Conda environment created with [install_conda_env()]. CUDA availability is detected
+#' via the NVIDIA driver (`nvidia-smi`, not `nvcc`). A compatible PyTorch wheel index is selected
+#' using a conservative mapping that **never chooses below cu126** and (by default) **prefers cu126**
+#' for broad compatibility. Falls back to CPU wheels if needed.
 #'
-#' @param conda_env_name Character. Name of the conda environment. Default "r-sentiner".
+#' @param conda_env_name Character. Name of the conda environment. Default "r-easynmt".
 #' @param python_version Character. Python version to use when creating the Conda environment.
-#'   Defaults to `"3.11"`. If the environment already exists, the version is not changed
-#'   unless \code{force = TRUE}.
+#'   Defaults to `"3.11"`. If the environment already exists, the version is not changed.
 #' @param conda_path Character. Path to Conda installation. If NULL, autodetect.
 #' @param verbose Logical. If TRUE, prints progress messages. Default TRUE.
 #'
 #' @return Invisibly returns `NULL`.
 #' @export
-install_torch <- function(conda_env_name = "r-sentiner",
+install_torch <- function(conda_env_name = "r-easynmt",
                           python_version = "3.11",
                           conda_path = NULL,
                           verbose = TRUE) {
 
-  vmessage <- function(...) if (verbose) message(...)
+  vmessage <- function(...) if (isTRUE(verbose)) base::message(...)
 
-  # Make sure the environment exists
   install_conda_env(
     conda_env_name = conda_env_name,
     python_version = python_version,
@@ -164,80 +286,54 @@ install_torch <- function(conda_env_name = "r-sentiner",
     verbose = verbose
   )
 
-  # Detect GPU
-  gpu_available <- FALSE
-  if (.Platform$OS.type == "windows") {
-    gpu_info <- try(system("wmic path win32_VideoController get name", intern = TRUE), silent = TRUE)
-    gpu_available <- any(grepl("NVIDIA", gpu_info, ignore.case = TRUE))
-  } else {
-    gpu_info <- try(system("nvidia-smi", intern = TRUE), silent = TRUE)
-    gpu_available <- !inherits(gpu_info, "try-error") && length(gpu_info) > 0
-  }
+  gpu_available <- check_gpu()
+  cuda_version <- if (isTRUE(gpu_available)) get_cuda_version() else NULL
 
-  # Detect CUDA version if GPU present
-  cuda_version <- NULL
-  if (gpu_available) {
-    nvcc_output <- tryCatch(system("nvcc --version", intern = TRUE), error = function(e) NULL)
-    if (!is.null(nvcc_output)) {
-      version_line <- nvcc_output[grepl("release", nvcc_output)]
-      cuda_version <- sub(".*release ([0-9]+\\.[0-9]+).*", "\\1", version_line)
-    }
-  }
-
-  # Construct install URL
-  base_url <- "https://download.pytorch.org/whl/"
-  index_url <- if (is.null(cuda_version)) {
-    paste0(base_url, "cpu")
-  } else {
-    paste0(base_url, "cu", gsub("\\.", "", cuda_version))
-  }
-
-  # Validate URL
-  validate_url <- function(url) {
-    if (!requireNamespace("httr", quietly = TRUE)) stop("Package 'httr' is required.")
-    response <- tryCatch(httr::HEAD(url), error = function(e) NULL)
-    !is.null(response) && httr::status_code(response) == 200
-  }
+  index_url <- construct_pytorch_install_url(cuda_version)
 
   if (!validate_url(index_url)) {
     cli::cli_warn("Invalid or unavailable PyTorch URL: {index_url}. Falling back to CPU-only build.")
-    index_url <- paste0(base_url, "cpu")
+    index_url <- "https://download.pytorch.org/whl/cpu"
     cuda_version <- NULL
   }
 
   vmessage("Installing PyTorch into conda environment '", conda_env_name, "' ...")
   if (is.null(cuda_version)) {
-    vmessage("No CUDA detected. Installing CPU-only build.")
+    vmessage("No GPU detected or no driver-reported CUDA. Installing CPU-only build.")
   } else {
-    vmessage("CUDA ", cuda_version, " detected. Installing GPU build.")
+    vmessage("Driver-reported CUDA ", cuda_version, " detected. Installing GPU build.")
   }
 
-  # Install via reticulate into conda env
-  tryCatch({
-    reticulate::py_install(
-      packages = c("torch", "torchvision", "torchaudio"),
-      envname = conda_env_name,
-      method = "conda",
-      pip = TRUE,
-      pip_options = paste("--index-url", index_url)
-    )
-    vmessage("Torch installation completed successfully.")
-  }, error = function(e) {
-    stop("Torch installation failed: ", e$message)
-  })
-
-  # Verify installation
-  tryCatch({
-    torch <- reticulate::import("torch", delay_load = TRUE)
-    vmessage("Torch successfully installed and imported.")
-    vmessage("Torch version: ", torch$`__version__`)
-    vmessage("CUDA available: ", torch$cuda$is_available())
-    if (!is.null(cuda_version)) {
-      vmessage("CUDA version (from torch): ", torch$version$cuda)
+  tryCatch(
+    {
+      reticulate::py_install(
+        packages = c("torch", "torchvision", "torchaudio"),
+        envname = conda_env_name,
+        method = "conda",
+        pip = TRUE,
+        pip_options = paste("--index-url", index_url)
+      )
+      vmessage("Torch installation completed successfully.")
+    },
+    error = function(e) {
+      base::stop("Torch installation failed: ", conditionMessage(e))
     }
-  }, error = function(e) {
-    stop("Verification failed: Torch is not properly installed.")
-  })
+  )
+
+  tryCatch(
+    {
+      torch <- reticulate::import("torch", delay_load = TRUE)
+      vmessage("Torch successfully installed and imported.")
+      vmessage("Torch version: ", torch$`__version__`)
+      vmessage("CUDA available (torch): ", torch$cuda$is_available())
+      if (!is.null(cuda_version)) {
+        vmessage("CUDA version (from torch): ", torch$version$cuda)
+      }
+    },
+    error = function(e) {
+      base::stop("Verification failed: Torch is not properly installed.")
+    }
+  )
 
   # Install onnxruntime-gpu / onnxruntime via reticulate into conda env
   tryCatch({
@@ -250,14 +346,14 @@ install_torch <- function(conda_env_name = "r-sentiner",
         pip = TRUE
       )
       vmessage("Installed onnxruntime-gpu.")
-      }else{
-        reticulate::py_install(
-          packages = c("onnxruntime"),
-          envname = conda_env_name,
-          method = "conda",
-          pip = TRUE)
-        vmessage("Installed onnxruntime.")
-      }
+    }else{
+      reticulate::py_install(
+        packages = c("onnxruntime"),
+        envname = conda_env_name,
+        method = "conda",
+        pip = TRUE)
+      vmessage("Installed onnxruntime.")
+    }
 
   }, error = function(e) {
     stop("onnxruntime installation failed: ", e$message)
@@ -265,6 +361,189 @@ install_torch <- function(conda_env_name = "r-sentiner",
 
   invisible(NULL)
 }
+
+
+
+
+
+
+
+#' @title Detect GPU availability (NVIDIA)
+#'
+#' @description Internal helper that checks for an NVIDIA GPU. Prefers `nvidia-smi -L` when
+#' available; on Windows falls back to `wmic` if needed.
+#'
+#' @return Logical scalar.
+#' @keywords internal
+#' @noRd
+check_gpu <- function() {
+  if (nzchar(Sys.which("nvidia-smi"))) {
+    out <- try(base::system("nvidia-smi -L", intern = TRUE), silent = TRUE)
+    return(!inherits(out, "try-error") && base::length(out) > 0)
+  }
+
+  if (identical(.Platform$OS.type, "windows")) {
+    gpu_info <- try(
+      base::system("wmic path win32_VideoController get name", intern = TRUE),
+      silent = TRUE
+    )
+    return(!inherits(gpu_info, "try-error") && any(grepl("NVIDIA", gpu_info, ignore.case = TRUE)))
+  }
+
+  FALSE
+}
+
+#' @title Detect CUDA availability (driver-level)
+#'
+#' @description Internal helper that checks for CUDA availability via the NVIDIA driver.
+#' Uses `nvidia-smi -L` when available; on Windows falls back to GPU presence.
+#'
+#' @return Logical scalar.
+#' @keywords internal
+#' @noRd
+check_cuda <- function() {
+  if (identical(.Platform$OS.type, "windows")) {
+    out <- try(base::system("nvidia-smi -L", intern = TRUE), silent = TRUE)
+    if (!inherits(out, "try-error") && base::length(out) > 0) return(TRUE)
+    return(check_gpu())
+  }
+
+  out <- try(base::system("nvidia-smi -L", intern = TRUE), silent = TRUE)
+  !inherits(out, "try-error") && base::length(out) > 0
+}
+
+#' @title Get CUDA version (driver-reported)
+#'
+#' @description Internal helper that extracts the CUDA version reported by the NVIDIA driver
+#' using `nvidia-smi` (not `nvcc`).
+#'
+#' @return Character scalar like `"12.6"`, or `NULL`.
+#' @keywords internal
+#' @noRd
+get_cuda_version <- function() {
+  out <- try(base::system("nvidia-smi", intern = TRUE), silent = TRUE)
+  if (inherits(out, "try-error") || base::length(out) == 0) return(NULL)
+
+  line <- out[grepl("CUDA Version", out, ignore.case = TRUE)]
+  if (base::length(line) == 0) return(NULL)
+
+  m <- base::regexec("CUDA Version:\\s*([0-9]+\\.[0-9]+)", line[1])
+  regm <- base::regmatches(line[1], m)
+  if (base::length(regm) == 0 || base::length(regm[[1]]) < 2) return(NULL)
+
+  regm[[1]][2]
+}
+
+#' @title Detect NVIDIA GPU name
+#'
+#' @description Internal helper to detect the NVIDIA GPU name without torch or nvcc.
+#' Prefers `nvidia-smi --query-gpu=name` and falls back to `wmic` on Windows.
+#'
+#' @return Character scalar GPU name, or `NULL`.
+#' @keywords internal
+#' @noRd
+get_nvidia_gpu_name <- function() {
+  if (identical(.Platform$OS.type, "windows")) {
+    out <- try(
+      base::system("nvidia-smi --query-gpu=name --format=csv,noheader", intern = TRUE),
+      silent = TRUE
+    )
+    if (!inherits(out, "try-error") && base::length(out) > 0) return(base::trimws(out[1]))
+
+    out2 <- try(
+      base::system("wmic path win32_VideoController get name", intern = TRUE),
+      silent = TRUE
+    )
+    if (inherits(out2, "try-error") || base::length(out2) == 0) return(NULL)
+
+    out2 <- base::trimws(out2)
+    out2 <- out2[nzchar(out2)]
+    out2 <- out2[!grepl("^name$", out2, ignore.case = TRUE)]
+    if (base::length(out2) == 0) return(NULL)
+    return(out2[1])
+  }
+
+  out <- try(
+    base::system("nvidia-smi --query-gpu=name --format=csv,noheader", intern = TRUE),
+    silent = TRUE
+  )
+  if (inherits(out, "try-error") || base::length(out) == 0) return(NULL)
+  base::trimws(out[1])
+}
+
+#' @title Choose PyTorch CUDA wheel tag (conservative)
+#'
+#' @description Internal helper that selects the PyTorch wheel index tag.
+#' Rules:
+#' - If no CUDA driver -> `"cpu"`
+#' - Never select tags below `"cu126"` (avoid cu118/cu121 entirely)
+#' - Prefer `"cu126"` by default for widest compatibility
+#' - Optionally allow `"cu128"` only if driver reports >= 12.8
+#' - Never select `"cu130"` (even if driver reports >= 13.0), to avoid surprising upgrades
+#' - Pascal guard: Tesla P100 always uses `"cu126"`
+#'
+#' @param cuda_version Character scalar like `"12.6"`, or `NULL`.
+#' @param gpu_name Character scalar GPU name, or `NULL`.
+#'
+#' @return Character scalar: `"cpu"`, `"cu126"`, or `"cu128"`.
+#' @keywords internal
+#' @noRd
+choose_pytorch_cuda_tag <- function(cuda_version, gpu_name = NULL) {
+  if (is.null(cuda_version)) return("cpu")
+
+  if (!is.null(gpu_name) && grepl("\\bP100\\b", gpu_name, ignore.case = TRUE)) {
+    return("cu126")
+  }
+
+  v <- suppressWarnings(base::as.numeric(cuda_version))
+  if (is.na(v)) return("cpu")
+
+  # Hard floor at 12.6 and never choose cu130.
+  if (v < 12.6) return("cpu")
+  if (v >= 12.8) return("cu128")
+  "cu126"
+}
+
+#' @title Construct PyTorch installation URL
+#'
+#' @description Internal helper to build the PyTorch wheel index URL based on the selected CUDA tag.
+#'
+#' @param cuda_version Character scalar like `"12.6"`, or `NULL`.
+#'
+#' @return Character scalar URL.
+#' @keywords internal
+#' @noRd
+construct_pytorch_install_url <- function(cuda_version) {
+  base_url <- "https://download.pytorch.org/whl/"
+
+  gpu_name <- get_nvidia_gpu_name()
+  tag <- choose_pytorch_cuda_tag(cuda_version = cuda_version, gpu_name = gpu_name)
+
+  paste0(base_url, tag)
+}
+
+#' @title Validate URL by checking HTTP response
+#'
+#' @description Internal helper that validates a URL with an HTTP HEAD request.
+#'
+#' @param url Character scalar.
+#'
+#' @return Logical scalar.
+#' @keywords internal
+#' @noRd
+validate_url <- function(url) {
+  if (!requireNamespace("httr", quietly = TRUE)) {
+    base::stop("Package 'httr' is required for URL validation.")
+  }
+
+  response <- tryCatch(httr::HEAD(url), error = function(e) NULL)
+  !is.null(response) && httr::status_code(response) == 200
+}
+
+
+
+
+
 
 
 
