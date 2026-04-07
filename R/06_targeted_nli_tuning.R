@@ -144,6 +144,8 @@ prepare_nli_data <- function(data,
 #' @param use_fp16 Use mixed-precision training (FP16; requires CUDA).
 #' @param entailment_index,contradiction_index NLI output indices.
 #'   \code{NULL} (default) triggers auto-detection from the model config.
+#' @param conda_env_name The name of the conda environment where the sentiment analysis
+#' model is installed. Default is "r-sentiner".
 #' @param ... Additional arguments to pass to the `initialize_sentiner` function.
 #'
 #' @return Path to the saved model directory (character).
@@ -169,6 +171,7 @@ fine_tune_nli <- function(data,
                           use_fp16 = FALSE,
                           entailment_index    = NULL,
                           contradiction_index = NULL,
+                          conda_env_name = "r-sentiner",
                           ...) {
 
   if (!requireNamespace("reticulate", quietly = TRUE)) {

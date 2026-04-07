@@ -26,6 +26,7 @@ fine_tune_nli(
   use_fp16 = FALSE,
   entailment_index = NULL,
   contradiction_index = NULL,
+  conda_env_name = "r-sentiner",
   ...
 )
 }
@@ -58,6 +59,9 @@ Auto-generated as \code{models/<run_name>} if \code{NULL}.}
 
 \item{entailment_index, contradiction_index}{NLI output indices.
 \code{NULL} (default) triggers auto-detection from the model config.}
+
+\item{conda_env_name}{The name of the conda environment where the sentiment analysis
+model is installed. Default is "r-sentiner".}
 
 \item{...}{Additional arguments to pass to the \code{initialize_sentiner} function.}
 }
