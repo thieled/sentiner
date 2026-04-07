@@ -58,7 +58,15 @@ utils::globalVariables(c(
   "sentiment_confidence",
   "sentiment_datetime",
   "sentiment_model",
-  "pct_diff_ph"
+  "pct_diff_ph",
+  "conda_env_name",
+  "doc_id",
+  "hypothesis",
+  "idx",
+  "label_hypothesis",
+  "label_nli_explicit",
+  "label_original",
+  "train_nli_model"
 
 ))
 

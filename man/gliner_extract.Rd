@@ -9,6 +9,7 @@ gliner_extract(
   labels,
   batch_size = 16L,
   chunk_factor = 100L,
+  threshold = 0.1,
   model = "urchade/gliner_multi-v2.1",
   env = "r-sentiner",
   script = NULL,
@@ -29,6 +30,10 @@ gliner_extract(
 \item{batch_size}{integer, batch size for Python GLiNER (default 16)}
 
 \item{chunk_factor}{integer, how many batches per Python call (default 100)}
+
+\item{threshold}{numeric, confidence threshold for entity extraction (default 0.1).
+Lower values (e.g., 0.1) are more sensitive and extract more entities.
+Higher values (e.g., 0.3-0.5) are more conservative.}
 
 \item{model}{character, model ID (default: "urchade/gliner_multi-v2.1")}
 

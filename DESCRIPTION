@@ -14,13 +14,16 @@ Imports:
     assertthat,
     cli,
     data.table,
+    dplyr,
     emoji,
+    glue,
     httr,
     processx,
     reticulate,
     stringi,
     stringr,
     textclean,
+    tibble,
     tokenizers,
     yyjsonr
 Suggests: 

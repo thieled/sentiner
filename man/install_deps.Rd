@@ -5,7 +5,7 @@
 \title{Install Python Dependencies for easieRnmt}
 \usage{
 install_deps(
-  packages = c("pytz", "python-dateutil"),
+  packages = c("pytz", "python-dateutil", "datasets", "scikit-learn"),
   envname = NULL,
   method = "auto",
   pip = TRUE,
@@ -14,7 +14,7 @@ install_deps(
 }
 \arguments{
 \item{packages}{Character vector of Python packages to install.
-Default includes "pytz" and "python-dateutil".}
+Default includes "pytz", "python-dateutil", "scikit-learn", "datasets".}
 
 \item{envname}{Name of the conda or virtual environment where packages
 should be installed. If NULL, installs into the active environment.}

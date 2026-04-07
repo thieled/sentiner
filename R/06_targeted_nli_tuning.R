@@ -144,7 +144,6 @@ prepare_nli_data <- function(data,
 #' @param use_fp16 Use mixed-precision training (FP16; requires CUDA).
 #' @param entailment_index,contradiction_index NLI output indices.
 #'   \code{NULL} (default) triggers auto-detection from the model config.
-#' @param python_script Path to the Python fine-tuning script.
 #' @param ... Additional arguments to pass to the `initialize_sentiner` function.
 #'
 #' @return Path to the saved model directory (character).
