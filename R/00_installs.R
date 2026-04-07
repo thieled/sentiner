@@ -552,7 +552,7 @@ validate_url <- function(url) {
 #' @description Installs required Python dependencies into the active environment.
 #' This function can be extended with additional packages as needed.
 #' @param packages Character vector of Python packages to install.
-#'   Default includes "pytz" and "python-dateutil".
+#'   Default includes "pytz", "python-dateutil", "scikit-learn", "datasets".
 #' @param envname Name of the conda or virtual environment where packages
 #'   should be installed. If NULL, installs into the active environment.
 #' @param method Installation method passed to reticulate::py_install
@@ -562,7 +562,10 @@ validate_url <- function(url) {
 #' @export
 install_deps <- function(
     packages = c("pytz",
-                 "python-dateutil"),
+                 "python-dateutil",
+                "datasets",
+                "scikit-learn"
+              ),
     envname = NULL,
     method = "auto",
     pip = TRUE,
