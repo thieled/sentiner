@@ -174,6 +174,7 @@ fine_tune_nli <- function(data,
                           conda_env_name = "r-sentiner",
                           ...) {
 
+  initialize_sentiner()
   if (!requireNamespace("reticulate", quietly = TRUE)) {
     stop("Package 'reticulate' is required.")
   }

@@ -36,6 +36,8 @@ get_targeted_sentiment <- function(data,
 
                                  ...){
 
+  initialize_sentiner()
+  
   vmessage <- function(...) if (verbose) message(...)
 
   # Assert that data is data frame or table

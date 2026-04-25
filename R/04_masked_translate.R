@@ -86,6 +86,8 @@ masked_ent_translate <- function(data,
                                  save_dir = NULL,
                                  ...){
 
+  initialize_sentiner()
+  
   vmessage <- function(...) if (verbose) message(...)
 
   if (!requireNamespace("easieRnmt", quietly = TRUE)) {

@@ -65,6 +65,8 @@ gliner_extract <- function(df, labels,
                            save_output_dir = NULL,
                            verbose = TRUE,
                            seed = 42L) {
+  
+  initialize_sentiner()
 
   # detect input type
   from_clean_text <- all(c("sen_id", "text_clean") %in% names(df))

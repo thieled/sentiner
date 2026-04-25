@@ -67,6 +67,6 @@ utils::globalVariables(c(
   "label_nli_explicit",
   "label_original",
   "train_nli_model"
-
 ))
 
+.env <- new.env()
