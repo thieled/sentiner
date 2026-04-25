@@ -766,7 +766,7 @@ initialize_sentiner <- function(python_version = "3.11",
     # Check if gliner is available -- Note: due to a dll issue on Windows, this is hacky
     gliner_version <- get_python_module_version("gliner", conda_env_name)
 
-    if (is.null(gliner_version)) {
+    if (is.null(gliner_version) || is.na(gliner_version)) {
       install_sentiner(python_version = python_version,
                       conda_env_name = conda_env_name,
                       ask = ask,
