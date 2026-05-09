@@ -4,33 +4,75 @@
 \alias{initialize_sentiner}
 \title{Initialize the sentiner Python environment}
 \usage{
-initialize_sentiner(gpu = check_gpu())
+initialize_sentiner(gpu = check_gpu(), python = NULL)
 }
 \arguments{
 \item{gpu}{Logical. Whether to install \code{onnxruntime-gpu} (CUDA only).
 Defaults to auto-detection via \code{check_gpu()}.}
+
+\item{python}{Optional path to a Python interpreter or an existing
+virtual environment directory. If supplied, sentiner skips
+\code{py_require()} and binds to the provided Python via
+\code{\link[reticulate:use_python]{reticulate::use_python()}} or \code{\link[reticulate:use_python]{reticulate::use_virtualenv()}}. The
+user is then responsible for ensuring all required packages are
+available.}
 }
 \value{
 Invisibly returns \code{TRUE}.
 }
 \description{
-Declares all required Python packages via \code{\link[reticulate]{py_require}},
-which provisions them using uv into an ephemeral virtual environment.
-PyTorch is installed with \code{UV_TORCH_BACKEND=auto}, which lets uv
-auto-detect NVIDIA (CUDA), AMD (ROCm), and Intel GPUs and pick the correct
-wheels — no manual driver querying needed. Pass \code{gpu = FALSE} to force
-CPU-only onnxruntime.
-
-The function is called automatically at the start of each sentiner function
-and is a no-op after the first successful call within a session.
+Declares all required Python packages via \code{\link[reticulate:py_require]{reticulate::py_require()}},
+which provisions them using \code{uv} into an ephemeral virtual environment.
+The function is called automatically when the first sentiner function
+is run.
 }
 \details{
-Non-torch packages are declared with \code{py_require()} so that reticulate /
-uv can resolve them together. PyTorch is handled by setting
-\code{UV_TORCH_BACKEND=auto}, which instructs uv to query for CUDA, ROCm,
-and Intel GPU drivers and select the matching PyTorch index automatically.
+The function for the most part grabs the GPU version of the Python
+packages when \code{uv} discovers a NVIDIA, AMD, or Intel GPU.
+\code{onnxruntime-gpu} only supports CUDA (NVIDIA), so the \code{gpu} parameter
+reflects NVIDIA presence only; AMD and Intel users get CPU \code{onnxruntime}
+while still getting GPU-accelerated PyTorch.
 
-\code{onnxruntime-gpu} only supports CUDA, so the \code{gpu} parameter
-reflects NVIDIA presence only; AMD and Intel users get CPU onnxruntime while
-still getting GPU-accelerated PyTorch.
+If you want full control over which Python is used, pass an explicit
+\code{python} argument or follow reticulate's
+\href{https://rstudio.github.io/reticulate/articles/versions.html#order-of-discovery}{order of discovery}
+to bring your own interpreter or virtual environment.
 }
+\section{Controlling install locations}{
+
+By default, \code{uv} and the ephemeral environments it creates are stored
+under \code{\link[tools:userdir]{tools::R_user_dir()}}\verb{("reticulate", "cache")}. For an ML stack
+like sentiner's (PyTorch, transformers, onnxruntime), this directory
+can grow to several GB. To relocate it, set one or more of the
+following environment variables in your \code{.Renviron} \emph{before} starting
+R (so they are picked up before reticulate or \code{uv} initialize):
+\itemize{
+\item \code{R_USER_CACHE_DIR} — reticulate's managed area, including downloaded
+\code{uv}, ephemeral virtual environments, and Python interpreters
+installed via \code{uv}. This is the broadest setting and usually the
+only one you need.
+\item \code{UV_CACHE_DIR} — \code{uv}'s own wheel cache. This is the directory that
+typically grows the fastest, since every resolved dependency version
+is cached here.
+\item \code{UV_PYTHON_INSTALL_DIR} — where \code{uv} stores Python interpreters it
+downloads. Useful if you want to share interpreters across projects
+but keep environments project-local.
+}
+
+Avoid placing any of these on cloud-synced folders such as OneDrive,
+Dropbox, or iCloud Drive: sync conflicts on the many small files in a
+Python environment can corrupt installations and dramatically slow
+down package resolution.
+
+Reticulate prunes its managed cache automatically every 120 days by
+default. To shorten this, set in your \code{.Rprofile}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{options(reticulate.max_cache_age = as.difftime(30, units = "days"))
+}\if{html}{\out{</div>}}
+
+To clear the cache manually:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{unlink(tools::R_user_dir("reticulate", "cache"), recursive = TRUE)
+}\if{html}{\out{</div>}}
+}
+
