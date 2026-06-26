@@ -11,9 +11,6 @@ gliner_extract(
   chunk_factor = 100L,
   threshold = 0.1,
   model = "urchade/gliner_multi-v2.1",
-  env = "r-sentiner",
-  script = NULL,
-  save_output_dir = NULL,
   verbose = TRUE,
   seed = 42L
 )
@@ -27,9 +24,9 @@ gliner_extract(
 
 \item{labels}{character vector of candidate labels}
 
-\item{batch_size}{integer, batch size for Python GLiNER (default 16)}
+\item{batch_size}{integer, batch size for GLiNER inference (default 16)}
 
-\item{chunk_factor}{integer, how many batches per Python call (default 100)}
+\item{chunk_factor}{integer, how many batches per inference call (default 100)}
 
 \item{threshold}{numeric, confidence threshold for entity extraction (default 0.1).
 Lower values (e.g., 0.1) are more sensitive and extract more entities.
@@ -37,18 +34,10 @@ Higher values (e.g., 0.3-0.5) are more conservative.}
 
 \item{model}{character, model ID (default: "urchade/gliner_multi-v2.1")}
 
-\item{env}{character, conda environment name (default: "r-sentiner")}
-
-\item{script}{optional path to the Python script; by default uses
-the installed copy in \code{inst/python/gliner_runner.py}}
-
-\item{save_output_dir}{optional directory to keep JSON output files;
-if NULL (default), outputs are deleted after reading}
-
 \item{verbose}{logical, if TRUE (default) print progress updates,
 if FALSE run silently}
 
-\item{seed}{integer, random seed to pass to Python (default 42)}
+\item{seed}{integer, random seed (default 42)}
 }
 \value{
 A data.table with columns:
@@ -82,4 +71,7 @@ Accepts either:
 If a \code{clean_text()} data.frame is provided, the function internally
 renames \code{sen_id -> doc_id} and \code{text_clean -> text} for processing,
 then restores the schema and merges metadata back after NER.
+
+The GLiNER model is loaded once per session and cached; subsequent calls
+with the same model reuse the in-memory instance.
 }

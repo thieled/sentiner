@@ -10,7 +10,6 @@ get_targeted_sentiment(
   text_col = "translation",
   entity_col = "target",
   id_col = "id",
-  conda_env_name = "r-sentiner",
   verbose = TRUE,
   model = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
   batch_size = 32L,
@@ -31,9 +30,6 @@ entities for sentiment analysis. Default is "target".}
 
 \item{id_col}{The name of the column in \code{data} that contains unique identifiers
 for each row. Default is "id".}
-
-\item{conda_env_name}{The name of the conda environment where the sentiment analysis
-model is installed. Default is "r-sentiner".}
 
 \item{verbose}{Logical indicating whether to print progress messages. Default is TRUE.}
 

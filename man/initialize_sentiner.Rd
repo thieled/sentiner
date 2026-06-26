@@ -4,11 +4,15 @@
 \alias{initialize_sentiner}
 \title{Initialize the sentiner Python environment}
 \usage{
-initialize_sentiner(gpu = check_gpu())
+initialize_sentiner(gpu = check_gpu(), uv_cache_dir = NULL, models_dir = NULL)
 }
 \arguments{
 \item{gpu}{Logical. Whether to install \code{onnxruntime-gpu} (CUDA only).
 Defaults to auto-detection via \code{check_gpu()}.}
+
+\item{uv_cache_dir}{Character (optional). Directory used by uv to install python libraries.}
+
+\item{models_dir}{Character (optional).  Directory used to cache huggingface models.}
 }
 \value{
 Invisibly returns \code{TRUE}.
