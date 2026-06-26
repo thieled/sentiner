@@ -17,6 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 
+[![Codecov test coverage](https://codecov.io/gh/thieled/sentiner/graph/badge.svg)](https://app.codecov.io/gh/thieled/sentiner)
 <!-- badges: end -->
 
 The goal of sentiner is to provide a versatile, fully reporducible, and relatively lightweight, package to conduct **targeted sentiment analyses** in R.
