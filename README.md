@@ -7,6 +7,7 @@
 
 [![Codecov test
 coverage](https://codecov.io/gh/thieled/sentiner/graph/badge.svg)](https://app.codecov.io/gh/thieled/sentiner)
+[![R-CMD-check](https://github.com/thieled/sentiner/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/thieled/sentiner/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The goal of sentiner is to provide a versatile, fully reporducible, and
@@ -132,7 +133,7 @@ Now we can call gliner to extract named entities:
 gliner_dt <- sentiner::gliner_extract(cleaned_dt,
                        labels = c("political_party", "politician"))
 #> ℹ Loading GLiNER model: urchade/gliner_multi-v2.1 on cuda
-#> ℹ Extracting entities: 1 chunk(s). Please hang on...✔ Entity extraction completed in 0.5s               
+#> ℹ Extracting entities: 1 chunk(s). Please hang on...✔ Entity extraction completed in 0.8s               
 
 dplyr::glimpse(gliner_dt)
 #> Rows: 5
@@ -150,7 +151,7 @@ dplyr::glimpse(gliner_dt)
 #> $ start        <int> 15, 23, 48, 1, 1
 #> $ end          <int> 26, 35, 63, 14, 6
 #> $ ner_model    <chr> "urchade/gliner_multi-v2.1", "urchade/gliner_multi-v2.1",…
-#> $ ner_detected <dttm> 2026-06-27 12:12:43, 2026-06-27 12:12:43, 2026-06-27 12:1…
+#> $ ner_detected <dttm> 2026-06-27 17:00:52, 2026-06-27 17:00:52, 2026-06-27 17:0…
 ```
 
 #### Entity Linking (optional)
@@ -175,7 +176,7 @@ ner_reference <- data.frame(
                 "us-i2", "us-i2")
 )
 
-f_match_ner <- digimodhelpers::fuzzy_match_df(input = gliner_dt, 
+f_match_ner <- sentiner::fuzzy_match_df(input = gliner_dt, 
                                               input_col = "entity_name", 
                                               input_id_col = "id", 
                                               target = ner_reference, 
@@ -252,8 +253,8 @@ sen_res <- sentiner::get_targeted_sentiment(data = ner_filtered,
                                             entity_col = "entity_name", 
                                             model = "dthiele/deberta-v3-base-targsenti-v5")
 #> ℹ Classifying targeted sentiment. Please hang on...
-#> Sentiment batches:   0%|          | 0/1 [00:00<?, ?batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  2.09batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  2.09batch/s]
-#> ✔ Targeted sentiment classification completed in 3.5s
+#> Sentiment batches:   0%|          | 0/1 [00:00<?, ?batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  1.22batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  1.22batch/s]
+#> ✔ Targeted sentiment classification completed in 3.9s
 
 dplyr::glimpse(sen_res)
 #> Rows: 5
@@ -271,7 +272,7 @@ dplyr::glimpse(sen_res)
 #> $ start                <int> 15, 23, 48, 1, 1
 #> $ end                  <int> 26, 35, 63, 14, 6
 #> $ ner_model            <chr> "urchade/gliner_multi-v2.1", "urchade/gliner_mult…
-#> $ ner_detected         <dttm> 2026-06-27 12:12:43, 2026-06-27 12:12:43, 2026-06…
+#> $ ner_detected         <dttm> 2026-06-27 17:00:52, 2026-06-27 17:00:52, 2026-06…
 #> $ input                <chr> "Republicans", "DonaldJTrump", "Hillary Clinton",…
 #> $ matched_target       <chr> "Republicans", "Donald Trump", "Hillary Clinton",…
 #> $ target_id            <chr> "us-o1", "us-i1", "us-i2", "us-o2", "us-i1"
@@ -281,5 +282,5 @@ dplyr::glimpse(sen_res)
 #> $ sentiment            <chr> "negative", "positive", "positive", "negative", "…
 #> $ sentiment_confidence <dbl> 0.9990234, 0.9990234, 0.9990234, 0.9990234, 0.985…
 #> $ sentiment_model      <chr> "dthiele/deberta-v3-base-targsenti-v5", "dthiele/…
-#> $ sentiment_datetime   <chr> "2026-06-27T12:12:46+00:00", "2026-06-27T12:12:46…
+#> $ sentiment_datetime   <chr> "2026-06-27T17:01:04+00:00", "2026-06-27T17:01:04…
 ```
