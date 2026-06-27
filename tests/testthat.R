@@ -5,3 +5,6 @@ library(testthat)
 library(sentiner)
 
 test_check("sentiner")
+
+
+## 
