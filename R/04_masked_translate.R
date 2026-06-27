@@ -35,6 +35,8 @@
 #'  below which a masked translation is considered unsuccessful; Default = `0.10`.
 #' @param verbose Logical, whether to print progress messages. Default = `TRUE`.
 #' @param save_dir Character. (Optional) Directory where interim translation results should be saved.
+#' @param uv_cache_dir Character (optional). Directory used by uv to install python libraries.
+#' @param models_dir Character (optional).  Directory used to cache huggingface models.
 #' @param ... Additional arguments passed to either
 #' \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown
 #' arguments are ignored with a warning.
@@ -84,9 +86,9 @@ masked_ent_translate <- function(data,
                                  restore_threshold = 0.10,
                                  verbose = TRUE,
                                  save_dir = NULL,
+                                 uv_cache_dir = NULL,
+                                 models_dir = NULL,
                                  ...){
-
-  initialize_sentiner()
   
   vmessage <- function(...) if (verbose) message(...)
 
@@ -96,33 +98,8 @@ masked_ent_translate <- function(data,
 
   # Handling of dot arguments
   dots <- list(...)
-  args_init <- dots[names(dots) %in% names(formals(initialize_sentiner))]
   args_tl <- dots[names(dots) %in% names(formals(easieRnmt::translate))]
 
-  unknown_args <- setdiff(names(dots),
-                          c(names(formals(initialize_sentiner)), names(formals(easieRnmt::translate))))
-  if (length(unknown_args) > 0) {
-    warning("Ignoring unknown arguments: ", paste(unknown_args, collapse = ", "))
-  }
-
-  # Step 1: Python back-end installations -----
-  do.call(initialize_sentiner, c(list(conda_env_name = conda_env_name), args_init)) # Init and pass on ... arguments
-
-  # Check if EasyNMT and fasttext are installed
-  easynmt_avail <- reticulate::py_module_available("easynmt")
-  fasttext_avail <- reticulate::py_module_available("fasttext")
-
-  # Install if EasyNMT or fasttext are not available
-  if (!all(c(easynmt_avail, fasttext_avail))) {
-    vmessage(paste0("Installing EasyNMT and fasttext in: ", conda_env_name))
-
-    # Remove any "force" from args_init
-    args_init_no_force <- args_init[setdiff(names(args_init), "force")]
-
-    # Install easynmt; passing on arguments from '. . .' -- only overriding 'force'
-    do.call(easieRnmt::install_easynmt,
-            c(args_init_no_force, list(conda_env_name = conda_env_name, force = FALSE)))
-  }
 
   # Try counter
   retry_count <- 1L
@@ -140,7 +117,6 @@ masked_ent_translate <- function(data,
     save_dir_try = NULL
   }
 
-
   # Step 2: Data preprocessing
   masked_data <- mask_target(data,
                              text_col = text_col,
@@ -148,7 +124,6 @@ masked_ent_translate <- function(data,
                              id_col = id_col)
 
   # Step 3: Call Translation
-  easieRnmt::initialize_easynmt(conda_env_name = "r-sentiner")
 
   # Call translation; (do.call to pass on dot arguments)
   tl_res <- do.call(easieRnmt::translate, c(list(x = masked_data,
@@ -161,7 +136,9 @@ masked_ent_translate <- function(data,
                                                  beam_size = beam_size,
                                                  deterministic = deterministic,
                                                  prob_threshold = prob_threshold,
-                                                 save_dir = save_dir_try
+                                                 save_dir = save_dir_try,
+                                                 uv_cache_dir = uv_cache_dir,
+                                                 models_dir = models_dir
   ),
   args_tl))
 
@@ -277,7 +254,9 @@ masked_ent_translate <- function(data,
           beam_size = beam_size,
           deterministic = deterministic,
           prob_threshold = prob_threshold,
-          save_dir = save_dir_try
+          save_dir = save_dir_try, 
+          uv_cache_dir = uv_cache_dir,
+          models_dir = models_dir
         ),
         args_tl
       )

@@ -15,6 +15,8 @@
 #' @param contradiction_index The index of the contradiction class in the model's output. Default is 1L.
 #' @param fp16 Logical indicating whether to use half-precision floating point
 #' during inference. Default is TRUE.
+#' @param uv_cache_dir Character (optional). Directory used by uv to install python libraries.
+#' @param models_dir Character (optional).  Directory used to cache huggingface models.
 #' @param ... Additional arguments to pass to the `initialize_sentiner` function.
 #' @return A data table containing the original data along with the predicted
 #' sentiment, sentiment confidence, sentiment model, and sentiment datetime.
@@ -30,10 +32,11 @@ get_targeted_sentiment <- function(data,
                                  entailment_index = 0L,
                                  contradiction_index = 1L,
                                  fp16 = TRUE,
+                                 uv_cache_dir = NULL,
+                                 models_dir = NULL,
+                                ...) {
 
-                                 ...){
-
-  initialize_sentiner()
+  initialize_sentiner(uv_cache_dir = uv_cache_dir, models_dir = models_dir)
   
   vmessage <- function(...) if (verbose) message(...)
 

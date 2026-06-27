@@ -150,7 +150,7 @@ dplyr::glimpse(gliner_dt)
 #> $ start        <int> 15, 23, 48, 1, 1
 #> $ end          <int> 26, 35, 63, 14, 6
 #> $ ner_model    <chr> "urchade/gliner_multi-v2.1", "urchade/gliner_multi-v2.1",…
-#> $ ner_detected <dttm> 2026-06-26 23:48:06, 2026-06-26 23:48:06, 2026-06-26 23:4…
+#> $ ner_detected <dttm> 2026-06-27 12:12:43, 2026-06-27 12:12:43, 2026-06-27 12:1…
 ```
 
 #### Entity Linking (optional)
@@ -214,9 +214,9 @@ ner_filtered <- gliner_dt[ner_keep, on = c(id = "input_id"), nomatch = 0]
 
 #### Masked Translation (optional)
 
-*(Note: Currently, this does not work due to a backend conflict of
-{sentiner} and {easieRnmt} – I’ll switch {easieRnmt} to `uv` and will
-fix this soon.)*
+*(Note: This step requires `easiernmt (>=0.0.3.0.0)` and requires you to
+restart your R session, as the backend of `easiernmt` is a bit more
+compicated. I aim to simplify this in the future.)*
 
 As the model used for sentiment classification seems to work better on
 English data, we machine translate the text. However, we want to ensure
@@ -252,8 +252,8 @@ sen_res <- sentiner::get_targeted_sentiment(data = ner_filtered,
                                             entity_col = "entity_name", 
                                             model = "dthiele/deberta-v3-base-targsenti-v5")
 #> ℹ Classifying targeted sentiment. Please hang on...
-#> Sentiment batches:   0%|          | 0/1 [00:00<?, ?batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  1.78batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  1.78batch/s]
-#> ✔ Targeted sentiment classification completed in 4.6s
+#> Sentiment batches:   0%|          | 0/1 [00:00<?, ?batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  2.09batch/s]Sentiment batches: 100%|##########| 1/1 [00:00<00:00,  2.09batch/s]
+#> ✔ Targeted sentiment classification completed in 3.5s
 
 dplyr::glimpse(sen_res)
 #> Rows: 5
@@ -271,7 +271,7 @@ dplyr::glimpse(sen_res)
 #> $ start                <int> 15, 23, 48, 1, 1
 #> $ end                  <int> 26, 35, 63, 14, 6
 #> $ ner_model            <chr> "urchade/gliner_multi-v2.1", "urchade/gliner_mult…
-#> $ ner_detected         <dttm> 2026-06-26 23:48:06, 2026-06-26 23:48:06, 2026-06…
+#> $ ner_detected         <dttm> 2026-06-27 12:12:43, 2026-06-27 12:12:43, 2026-06…
 #> $ input                <chr> "Republicans", "DonaldJTrump", "Hillary Clinton",…
 #> $ matched_target       <chr> "Republicans", "Donald Trump", "Hillary Clinton",…
 #> $ target_id            <chr> "us-o1", "us-i1", "us-i2", "us-o2", "us-i1"
@@ -281,5 +281,5 @@ dplyr::glimpse(sen_res)
 #> $ sentiment            <chr> "negative", "positive", "positive", "negative", "…
 #> $ sentiment_confidence <dbl> 0.9990234, 0.9990234, 0.9990234, 0.9990234, 0.985…
 #> $ sentiment_model      <chr> "dthiele/deberta-v3-base-targsenti-v5", "dthiele/…
-#> $ sentiment_datetime   <chr> "2026-06-26T23:48:12+00:00", "2026-06-26T23:48:12…
+#> $ sentiment_datetime   <chr> "2026-06-27T12:12:46+00:00", "2026-06-27T12:12:46…
 ```

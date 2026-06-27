@@ -31,6 +31,8 @@
 #' @param verbose logical, if TRUE (default) print progress updates,
 #'   if FALSE run silently
 #' @param seed integer, random seed (default 42)
+#' @param uv_cache_dir Character (optional). Directory used by uv to install python libraries.
+#' @param models_dir Character (optional).  Directory used to cache huggingface models.
 #'
 #' @return A data.table with columns:
 #' \itemize{
@@ -59,9 +61,11 @@ gliner_extract <- function(df, labels,
                            threshold = 0.1,
                            model = "urchade/gliner_multi-v2.1",
                            verbose = TRUE,
-                           seed = 42L) {
+                           seed = 42L,
+                           uv_cache_dir = NULL,
+                           models_dir = NULL) {
 
-  initialize_sentiner()
+  initialize_sentiner(uv_cache_dir = uv_cache_dir, models_dir = models_dir)
 
   # detect input type
   from_clean_text <- all(c("sen_id", "text_clean") %in% names(df))

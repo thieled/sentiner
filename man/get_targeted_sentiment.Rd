@@ -16,6 +16,8 @@ get_targeted_sentiment(
   entailment_index = 0L,
   contradiction_index = 1L,
   fp16 = TRUE,
+  uv_cache_dir = NULL,
+  models_dir = NULL,
   ...
 )
 }
@@ -44,6 +46,10 @@ for each row. Default is "id".}
 
 \item{fp16}{Logical indicating whether to use half-precision floating point
 during inference. Default is TRUE.}
+
+\item{uv_cache_dir}{Character (optional). Directory used by uv to install python libraries.}
+
+\item{models_dir}{Character (optional).  Directory used to cache huggingface models.}
 
 \item{...}{Additional arguments to pass to the \code{initialize_sentiner} function.}
 }

@@ -149,7 +149,7 @@ ner_filtered <- gliner_dt[ner_keep, on = c(id = "input_id"), nomatch = 0]
 
 #### Masked Translation (optional)
 
-*(Note: Currently, this does not work due to a backend conflict of {sentiner} and {easieRnmt} -- I'll switch {easieRnmt} to `uv` and will fix this soon.)*
+*(Note: This step requires `easiernmt (>=0.0.3.0.0)` and requires you to restart your R session, as the backend of `easiernmt` is a bit more compicated. I aim to simplify this in the future.)*
 
 As the model used for sentiment classification seems to work better on English data, we machine translate the text. However, we want to ensure that the named entities are preseverd as-is, that means they should not be translated. To achieve this, we mask them and replace the placeholder after translation.
 

@@ -20,6 +20,8 @@ masked_ent_translate(
   restore_threshold = 0.1,
   verbose = TRUE,
   save_dir = NULL,
+  uv_cache_dir = NULL,
+  models_dir = NULL,
   ...
 )
 }
@@ -63,6 +65,10 @@ below which a masked translation is considered unsuccessful; Default = \code{0.1
 \item{verbose}{Logical, whether to print progress messages. Default = \code{TRUE}.}
 
 \item{save_dir}{Character. (Optional) Directory where interim translation results should be saved.}
+
+\item{uv_cache_dir}{Character (optional). Directory used by uv to install python libraries.}
+
+\item{models_dir}{Character (optional).  Directory used to cache huggingface models.}
 
 \item{...}{Additional arguments passed to either
 \code{initialize_sentiner()} or \code{easieRnmt::translate()}. Unknown

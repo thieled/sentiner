@@ -12,7 +12,9 @@ gliner_extract(
   threshold = 0.1,
   model = "urchade/gliner_multi-v2.1",
   verbose = TRUE,
-  seed = 42L
+  seed = 42L,
+  uv_cache_dir = NULL,
+  models_dir = NULL
 )
 }
 \arguments{
@@ -38,6 +40,10 @@ Higher values (e.g., 0.3-0.5) are more conservative.}
 if FALSE run silently}
 
 \item{seed}{integer, random seed (default 42)}
+
+\item{uv_cache_dir}{Character (optional). Directory used by uv to install python libraries.}
+
+\item{models_dir}{Character (optional).  Directory used to cache huggingface models.}
 }
 \value{
 A data.table with columns:
