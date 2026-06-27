@@ -16,16 +16,16 @@ Imports:
     data.table,
     dplyr,
     emoji,
+    fastmatch,
     glue,
     reticulate,
+    stringdist,
     stringi,
     stringr,
     textclean,
     tibble,
     tokenizers
 Suggests: 
-    fastmatch,
-    stringdist,
     easieRnmt (>= 0.0.3.0.0),
     testthat
 Remotes: 

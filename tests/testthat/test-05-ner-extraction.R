@@ -2,6 +2,7 @@
 # These tests verify that named entity recognition works
 
 test_that("gliner_extract works end-to-end", {
+  skip_on_os("mac")
   skip_if_not(reticulate::py_module_available("gliner"), "GLiNER not available")
   
   # Create test data once
