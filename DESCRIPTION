@@ -1,9 +1,18 @@
 Package: sentiner
-Title: Targeted Sentiment Analysis with GLiNER and Transformers from R 
-Version: 0.0.2.0.1
+Title: Targeted Sentiment Analysis with 'GLiNER' and 'Transformers' from 'R' 
+Version: 0.0.3
 Authors@R: 
-    person("Daniel", "Thiele", , "daniel.thiele@fu-berlin.de", role = c("aut", "cre"))
-Description: Targeted Sentiment Analysis with GliNER and Transformers from R.
+    c(person(given = "Daniel",
+           family = "Thiele",
+           email = "daniel.thiele@fu-berlin.de", 
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-0324-4943")),
+      person(given = "Johannes B.",
+           family = "Gruber",
+           email = "JohannesB.Gruber@gmail.com", 
+           role = c("ctb"),
+           comment = c(ORCID = "0000-0001-9177-1772")))
+Description: Targeted Sentiment Analysis with 'GliNER' and 'Transformers' from 'R'.
 License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -26,7 +35,7 @@ Imports:
     tibble,
     tokenizers
 Suggests: 
-    easieRnmt (>= 0.0.3.0.0),
+    easieRnmt (>= 0.0.3),
     testthat
 Remotes: 
     thieled/easieRnmt
